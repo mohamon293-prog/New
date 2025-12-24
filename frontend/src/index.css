@@ -132,7 +132,8 @@
   }
 
   .product-card {
-    @apply group relative bg-card border border-border rounded-xl overflow-hidden transition-all duration-300 hover:border-primary/50 hover:-translate-y-1;
+    @apply relative bg-card border border-border rounded-xl overflow-hidden duration-300 hover:border-primary/50 hover:-translate-y-1;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
   }
 
   .product-card:hover {
