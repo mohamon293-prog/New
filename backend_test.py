@@ -348,6 +348,91 @@ class GameloAPITester:
         else:
             self.log_result("Admin get tickets", False, f"Response: {response}")
 
+    def test_csv_upload_functionality(self):
+        """Test CSV codes upload functionality"""
+        if not self.admin_token:
+            self.log_result("CSV upload", False, "No admin token available")
+            return
+            
+        if not self.test_product_id:
+            self.log_result("CSV upload", False, "No test product available")
+            return
+
+        # Test 1: Upload CSV with line-separated codes
+        csv_content_lines = "TESTCODE001\nTESTCODE002\nTESTCODE003"
+        success, response = self.make_request(
+            'POST', 
+            f'/admin/products/{self.test_product_id}/codes/upload',
+            csv_content_lines,
+            use_admin=True,
+            content_type='text/plain'
+        )
+        if success and 'codes_added' in response:
+            codes_added = response['codes_added']
+            self.log_result("CSV upload (line-separated)", True, f"Added {codes_added} codes")
+        else:
+            self.log_result("CSV upload (line-separated)", False, f"Response: {response}")
+
+        # Test 2: Upload CSV with comma-separated codes
+        csv_content_comma = "TESTCODE004,TESTCODE005,TESTCODE006"
+        success, response = self.make_request(
+            'POST', 
+            f'/admin/products/{self.test_product_id}/codes/upload',
+            csv_content_comma,
+            use_admin=True,
+            content_type='text/plain'
+        )
+        if success and 'codes_added' in response:
+            codes_added = response['codes_added']
+            self.log_result("CSV upload (comma-separated)", True, f"Added {codes_added} codes")
+        else:
+            self.log_result("CSV upload (comma-separated)", False, f"Response: {response}")
+
+        # Test 3: Test duplicate detection
+        duplicate_content = "TESTCODE001,TESTCODE007,TESTCODE002"  # Mix of new and duplicate
+        success, response = self.make_request(
+            'POST', 
+            f'/admin/products/{self.test_product_id}/codes/upload',
+            duplicate_content,
+            use_admin=True,
+            content_type='text/plain'
+        )
+        if success and 'duplicates_skipped' in response:
+            duplicates_skipped = response['duplicates_skipped']
+            codes_added = response['codes_added']
+            self.log_result("CSV duplicate detection", True, f"Added {codes_added}, skipped {duplicates_skipped} duplicates")
+        else:
+            self.log_result("CSV duplicate detection", False, f"Response: {response}")
+
+        # Test 4: Test empty content
+        success, response = self.make_request(
+            'POST', 
+            f'/admin/products/{self.test_product_id}/codes/upload',
+            "",
+            use_admin=True,
+            expected_status=400,
+            content_type='text/plain'
+        )
+        if not success:  # Should fail with 400
+            self.log_result("CSV empty content validation", True, "Correctly rejected empty content")
+        else:
+            self.log_result("CSV empty content validation", False, "Should have rejected empty content")
+
+    def test_product_codes_count_update(self):
+        """Test that product codes count updates after CSV upload"""
+        if not self.admin_token or not self.test_product_id:
+            self.log_result("Product codes count update", False, "Missing admin token or product ID")
+            return
+
+        # Get product codes count
+        success, response = self.make_request('GET', f'/admin/products/{self.test_product_id}/codes', use_admin=True)
+        if success and 'stats' in response:
+            total_codes = response['stats']['total']
+            unused_codes = response['stats']['unused']
+            self.log_result("Product codes count check", True, f"Total: {total_codes}, Unused: {unused_codes}")
+        else:
+            self.log_result("Product codes count check", False, f"Response: {response}")
+
     def test_unauthorized_access(self):
         """Test that protected endpoints require authentication"""
         # Test without token
