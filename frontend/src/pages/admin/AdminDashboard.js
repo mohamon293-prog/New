@@ -1410,20 +1410,6 @@ const SiteSettings = () => {
     </div>
   );
 };
-          </div>
-          <div>
-            <Label>Twitter</Label>
-            <Input value={settings?.social_links?.twitter || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, twitter: e.target.value}})} dir="ltr" />
-          </div>
-          <div>
-            <Label>Facebook</Label>
-            <Input value={settings?.social_links?.facebook || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, facebook: e.target.value}})} dir="ltr" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Main Dashboard Component
 export default function AdminDashboard() {
