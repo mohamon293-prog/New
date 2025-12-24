@@ -243,6 +243,42 @@ export default function CartPage() {
                 <h3 className="font-heading text-lg font-bold mb-4">
                   ملخص الطلب
                 </h3>
+
+                {/* Discount Code Input */}
+                <div className="mb-4">
+                  {appliedDiscount ? (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="text-sm font-medium text-green-500">
+                          {appliedDiscount.code}
+                        </span>
+                      </div>
+                      <button onClick={removeDiscount} className="text-muted-foreground hover:text-destructive">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Tag className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={discountCode}
+                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                          placeholder="كود الخصم"
+                          className="pr-10"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleApplyDiscount}
+                        disabled={applyingDiscount || !discountCode}
+                      >
+                        {applyingDiscount ? "..." : "تطبيق"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 
                 <div className="space-y-3 pb-4 border-b border-border">
                   <div className="flex justify-between">
@@ -251,14 +287,16 @@ export default function CartPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">الخصم</span>
-                    <span className="text-green-500">-0.00</span>
+                    <span className="text-green-500 ltr-nums">
+                      -{appliedDiscount ? formatPrice(appliedDiscount.discount_amount, currency) : "0.00"}
+                    </span>
                   </div>
                 </div>
                 
                 <div className="flex justify-between py-4 text-lg font-bold">
                   <span>الإجمالي</span>
                   <span className="text-primary ltr-nums">
-                    {formatPrice(getTotal(), currency)}
+                    {formatPrice(appliedDiscount ? appliedDiscount.final_total : getTotal(), currency)}
                   </span>
                 </div>
 
