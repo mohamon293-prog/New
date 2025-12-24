@@ -426,7 +426,8 @@ async def create_category(category: CategoryCreate, user: dict = Depends(get_adm
     }
     
     await db.categories.insert_one(cat_doc)
-    del cat_doc["_id"] if "_id" in cat_doc else None
+    if "_id" in cat_doc:
+        del cat_doc["_id"]
     return cat_doc
 
 # ==================== PRODUCT ENDPOINTS ====================
