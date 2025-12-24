@@ -1196,6 +1196,116 @@ const SiteSettings = () => {
         </Button>
       </div>
 
+      {/* Logo & Images */}
+      <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+        <h3 className="font-bold text-lg border-b border-border pb-2">🎨 الشعار والصور</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>شعار الموقع (Logo)</Label>
+            <Input value={settings?.logo_url || ""} onChange={(e) => setSettings({...settings, logo_url: e.target.value})} dir="ltr" placeholder="https://..." />
+            {settings?.logo_url && <img src={settings.logo_url} alt="Logo" className="mt-2 h-12 object-contain bg-secondary rounded p-1" />}
+            <p className="text-xs text-muted-foreground mt-1">ارفع الشعار على imgur.com أو imgbb.com والصق الرابط</p>
+          </div>
+          <div>
+            <Label>شعار داكن (للخلفية الفاتحة)</Label>
+            <Input value={settings?.logo_dark_url || ""} onChange={(e) => setSettings({...settings, logo_dark_url: e.target.value})} dir="ltr" placeholder="https://..." />
+            {settings?.logo_dark_url && <img src={settings.logo_dark_url} alt="Logo Dark" className="mt-2 h-12 object-contain bg-white rounded p-1" />}
+          </div>
+        </div>
+        <div>
+          <Label>أيقونة الموقع (Favicon)</Label>
+          <Input value={settings?.favicon_url || ""} onChange={(e) => setSettings({...settings, favicon_url: e.target.value})} dir="ltr" placeholder="https://..." />
+          {settings?.favicon_url && <img src={settings.favicon_url} alt="Favicon" className="mt-2 h-8 w-8 object-contain" />}
+        </div>
+        <div>
+          <Label>صورة القسم الرئيسي (Hero Image)</Label>
+          <Input value={settings?.hero_image_url || ""} onChange={(e) => setSettings({...settings, hero_image_url: e.target.value})} dir="ltr" placeholder="https://..." />
+          {settings?.hero_image_url && <img src={settings.hero_image_url} alt="Hero" className="mt-2 w-full max-w-md h-40 object-cover rounded-lg" />}
+        </div>
+      </div>
+
+      {/* Banners */}
+      <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+        <h3 className="font-bold text-lg border-b border-border pb-2">🖼️ البانرات والإعلانات</h3>
+        <p className="text-sm text-muted-foreground">أضف بانرات ترويجية تظهر في الصفحة الرئيسية</p>
+        {(settings?.banners || []).map((banner, index) => (
+          <div key={index} className="p-3 rounded-lg bg-secondary/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-sm">بانر {index + 1}</span>
+              <label className="flex items-center gap-2 text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={banner.is_active} 
+                  onChange={(e) => {
+                    const newBanners = [...(settings?.banners || [])];
+                    newBanners[index] = {...banner, is_active: e.target.checked};
+                    setSettings({...settings, banners: newBanners});
+                  }}
+                  className="rounded"
+                />
+                مفعّل
+              </label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">رابط الصورة</Label>
+                <Input 
+                  value={banner.image_url || ""} 
+                  onChange={(e) => {
+                    const newBanners = [...(settings?.banners || [])];
+                    newBanners[index] = {...banner, image_url: e.target.value};
+                    setSettings({...settings, banners: newBanners});
+                  }}
+                  dir="ltr" 
+                  placeholder="https://..."
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">رابط عند النقر</Label>
+                <Input 
+                  value={banner.link || ""} 
+                  onChange={(e) => {
+                    const newBanners = [...(settings?.banners || [])];
+                    newBanners[index] = {...banner, link: e.target.value};
+                    setSettings({...settings, banners: newBanners});
+                  }}
+                  dir="ltr" 
+                  placeholder="/products أو https://..."
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">عنوان البانر (اختياري)</Label>
+              <Input 
+                value={banner.title || ""} 
+                onChange={(e) => {
+                  const newBanners = [...(settings?.banners || [])];
+                  newBanners[index] = {...banner, title: e.target.value};
+                  setSettings({...settings, banners: newBanners});
+                }}
+                placeholder="خصم 50% على جميع المنتجات"
+                className="h-9"
+              />
+            </div>
+            {banner.image_url && <img src={banner.image_url} alt={`Banner ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />}
+          </div>
+        ))}
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="w-full"
+          onClick={() => {
+            const newBanners = [...(settings?.banners || [])];
+            newBanners.push({id: String(newBanners.length + 1), image_url: "", title: "", link: "", is_active: false});
+            setSettings({...settings, banners: newBanners});
+          }}
+        >
+          <Plus className="h-4 w-4 ml-2" /> إضافة بانر جديد
+        </Button>
+      </div>
+
       {/* Basic Info */}
       <div className="p-4 rounded-xl bg-card border border-border space-y-4">
         <h3 className="font-bold text-lg border-b border-border pb-2">المعلومات الأساسية</h3>
@@ -1269,15 +1379,37 @@ const SiteSettings = () => {
 
       {/* Footer */}
       <div className="p-4 rounded-xl bg-card border border-border space-y-4">
-        <h3 className="font-bold text-lg border-b border-border pb-2">الفوتر</h3>
+        <h3 className="font-bold text-lg border-b border-border pb-2">الفوتر وروابط السوشيال</h3>
         <div>
           <Label>نص الفوتر</Label>
           <Textarea value={settings?.footer_text || ""} onChange={(e) => setSettings({...settings, footer_text: e.target.value})} rows={2} />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <Label>Instagram</Label>
-            <Input value={settings?.social_links?.instagram || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, instagram: e.target.value}})} dir="ltr" />
+            <Input value={settings?.social_links?.instagram || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, instagram: e.target.value}})} dir="ltr" placeholder="https://instagram.com/..." />
+          </div>
+          <div>
+            <Label>Twitter / X</Label>
+            <Input value={settings?.social_links?.twitter || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, twitter: e.target.value}})} dir="ltr" placeholder="https://twitter.com/..." />
+          </div>
+          <div>
+            <Label>Facebook</Label>
+            <Input value={settings?.social_links?.facebook || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, facebook: e.target.value}})} dir="ltr" placeholder="https://facebook.com/..." />
+          </div>
+          <div>
+            <Label>TikTok</Label>
+            <Input value={settings?.social_links?.tiktok || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, tiktok: e.target.value}})} dir="ltr" placeholder="https://tiktok.com/..." />
+          </div>
+          <div>
+            <Label>YouTube</Label>
+            <Input value={settings?.social_links?.youtube || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, youtube: e.target.value}})} dir="ltr" placeholder="https://youtube.com/..." />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
           </div>
           <div>
             <Label>Twitter</Label>
