@@ -205,6 +205,57 @@ export const Header = () => {
               </Button>
             </Link>
 
+            {/* Notifications */}
+            {user && (
+              <DropdownMenu onOpenChange={(open) => open && fetchNotifications()}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    data-testid="notifications-button"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-80">
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <span className="font-medium">الإشعارات</span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllRead}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        تحديد الكل كمقروء
+                      </button>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  {notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                      <DropdownMenuItem key={notif.id} className="flex-col items-start">
+                        <span className={`text-sm ${notif.is_read ? "text-muted-foreground" : "font-medium"}`}>
+                          {notif.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-1">
+                          {notif.message}
+                        </span>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      لا توجد إشعارات
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* User Menu */}
             {user ? (
               <DropdownMenu>
