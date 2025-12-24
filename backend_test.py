@@ -88,7 +88,7 @@ class GameloAPITester:
         timestamp = datetime.now().strftime('%H%M%S')
         user_data = {
             "name": f"Test User {timestamp}",
-            "email": f"testuser{timestamp}@gamelo.test",
+            "email": f"testuser{timestamp}@example.com",
             "password": "TestPass123!",
             "phone": "0791234567"
         }
