@@ -33,7 +33,7 @@ export const ProductCard = ({ product }) => {
   return (
     <Link
       to={`/products/${product.id}`}
-      className="product-card block"
+      className="group block rounded-xl border border-border bg-card overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 active:scale-[0.98]"
       data-testid={`product-card-${product.id}`}
     >
       {/* Image */}
@@ -41,86 +41,84 @@ export const ProductCard = ({ product }) => {
         <img
           src={product.image_url}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />
         
-        {/* Badges */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2">
+        {/* Badges - Top */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1.5">
           {discount > 0 && (
-            <Badge className="bg-destructive text-destructive-foreground">
+            <Badge className="bg-destructive text-destructive-foreground text-xs px-2 py-0.5">
               -{discount}%
             </Badge>
           )}
           {product.is_featured && (
-            <Badge className="bg-accent text-accent-foreground">
-              <Zap className="h-3 w-3 ml-1" />
+            <Badge className="bg-accent text-accent-foreground text-xs px-2 py-0.5">
+              <Zap className="h-3 w-3 ml-0.5" />
               مميز
             </Badge>
           )}
         </div>
 
-        {/* Stock Badge */}
+        {/* Stock Badge - Bottom */}
         {isLowStock && (
-          <div className="absolute bottom-3 right-3">
-            <Badge variant="outline" className="bg-background/80 backdrop-blur-sm text-orange-500 border-orange-500">
-              متبقي {product.stock_count} فقط
+          <div className="absolute bottom-2 right-2">
+            <Badge variant="outline" className="bg-background/90 backdrop-blur-sm text-orange-500 border-orange-500/50 text-xs">
+              متبقي {product.stock_count}
             </Badge>
           </div>
         )}
+        
+        {/* Out of Stock Overlay */}
         {isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <Badge className="bg-destructive text-lg px-4 py-2">نفذت الكمية</Badge>
+            <Badge className="bg-destructive text-sm px-3 py-1.5">نفذت الكمية</Badge>
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-3">
-        {/* Category & Platform */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{product.category_name}</span>
+      <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+        {/* Category */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="truncate">{product.category_name}</span>
           <span>•</span>
-          <span>{product.region}</span>
+          <span className="truncate">{product.region}</span>
         </div>
 
         {/* Title */}
-        <h3 className="font-heading font-bold text-foreground line-clamp-2 min-h-[2.5rem]">
+        <h3 className="font-heading font-bold text-sm sm:text-base text-foreground line-clamp-2 min-h-[2.25rem] sm:min-h-[2.5rem] leading-tight">
           {product.name}
         </h3>
 
         {/* Rating */}
         {product.review_count > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium ltr-nums">{product.rating}</span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+            <span className="text-xs sm:text-sm font-medium ltr-nums">{product.rating}</span>
             <span className="text-xs text-muted-foreground">
-              ({product.review_count} تقييم)
+              ({product.review_count})
             </span>
           </div>
         )}
 
         {/* Price */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-primary ltr-nums">
-              {formatPrice(price, currency)}
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-base sm:text-lg font-bold text-primary ltr-nums">
+            {formatPrice(price, currency)}
+          </span>
+          {originalPrice && (
+            <span className="text-xs sm:text-sm text-muted-foreground line-through ltr-nums">
+              {formatPrice(originalPrice, currency)}
             </span>
-            {originalPrice && (
-              <span className="text-sm text-muted-foreground line-through ltr-nums">
-                {formatPrice(originalPrice, currency)}
-              </span>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Add to Cart */}
+        {/* Add to Cart Button */}
         <Button
           onClick={handleAddToCart}
           disabled={isOutOfStock}
-          className="w-full gap-2"
+          className="w-full gap-2 h-9 sm:h-10 text-sm"
           size="sm"
           data-testid={`add-to-cart-${product.id}`}
         >
