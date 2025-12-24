@@ -12,8 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../components/ui/sheet";
 import { Skeleton } from "../components/ui/skeleton";
-import { Search, Filter, Grid, List, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronLeft } from "lucide-react";
 import { API_URL } from "../lib/utils";
 
 export default function ProductsPage() {
@@ -21,7 +28,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
-  const [viewMode, setViewMode] = useState("grid");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const platform = searchParams.get("platform") || "";
   const category = searchParams.get("category") || "";
@@ -45,7 +52,6 @@ export default function ProductsPage() {
       setProducts(response.data);
     } catch (error) {
       console.error("Failed to fetch products:", error);
-      // Use mock data as fallback
       let filtered = [...featuredProducts];
       
       if (platform) {
@@ -83,7 +89,6 @@ export default function ProductsPage() {
     searchParams.set("sort", value);
     setSearchParams(searchParams);
     
-    // Sort products locally
     let sorted = [...products];
     switch (value) {
       case "price_low":
@@ -107,127 +112,173 @@ export default function ProductsPage() {
   const clearFilters = () => {
     setSearchParams({});
     setSearchQuery("");
+    setFiltersOpen(false);
+  };
+
+  const selectCategory = (slug) => {
+    if (slug) {
+      searchParams.set("platform", slug);
+    } else {
+      searchParams.delete("platform");
+    }
+    setSearchParams(searchParams);
+    setFiltersOpen(false);
   };
 
   const activeCategory = categories.find((c) => c.slug === platform);
+  const hasFilters = platform || searchParams.get("search") || featured;
+
+  // Filters Component (shared between mobile sheet and desktop sidebar)
+  const FiltersContent = () => (
+    <div className="space-y-6">
+      {/* Search */}
+      <div className="space-y-2">
+        <h3 className="font-heading font-bold text-sm">البحث</h3>
+        <form onSubmit={handleSearch} className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="ابحث عن منتج..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-10 h-11"
+            data-testid="products-search-input"
+          />
+        </form>
+      </div>
+
+      {/* Categories */}
+      <div className="space-y-2">
+        <h3 className="font-heading font-bold text-sm">الفئات</h3>
+        <div className="space-y-1">
+          <button
+            onClick={() => selectCategory("")}
+            className={`w-full text-right px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              !platform
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-secondary"
+            }`}
+            data-testid="filter-all"
+          >
+            جميع الفئات
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => selectCategory(cat.slug)}
+              className={`w-full text-right px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                platform === cat.slug
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-secondary"
+              }`}
+              data-testid={`filter-${cat.slug}`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Clear Filters */}
+      {hasFilters && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={clearFilters}
+          data-testid="clear-filters"
+        >
+          <X className="h-4 w-4 ml-2" />
+          مسح الفلاتر
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen">
       {/* Header */}
       <section className="bg-card border-b border-border">
-        <div className="section-container py-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="font-heading text-2xl md:text-3xl font-bold">
-                {activeCategory ? activeCategory.name : "جميع المنتجات"}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {activeCategory
-                  ? activeCategory.description
-                  : "تصفح مجموعتنا الكاملة من أكواد الألعاب"}
-              </p>
-            </div>
-            
+        <div className="px-4 py-5 md:py-8">
+          <div className="max-w-7xl mx-auto">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Link to="/" className="hover:text-foreground">
-                الرئيسية
-              </Link>
-              <span>/</span>
+            <nav className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-3">
+              <Link to="/" className="hover:text-foreground">الرئيسية</Link>
+              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-foreground">
                 {activeCategory ? activeCategory.name : "المنتجات"}
               </span>
             </nav>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="font-heading text-xl sm:text-2xl md:text-3xl font-bold">
+                  {activeCategory ? activeCategory.name : "جميع المنتجات"}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {activeCategory ? activeCategory.description : `${products.length} منتج متوفر`}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="section-container py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
-          <aside className="lg:w-64 flex-shrink-0">
-            <div className="sticky top-24 space-y-6">
-              {/* Search */}
-              <div className="space-y-2">
-                <h3 className="font-heading font-bold text-sm">البحث</h3>
-                <form onSubmit={handleSearch} className="relative">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="ابحث عن منتج..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pr-10"
-                    data-testid="products-search-input"
-                  />
-                </form>
-              </div>
-
-              {/* Categories */}
-              <div className="space-y-2">
-                <h3 className="font-heading font-bold text-sm">الفئات</h3>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => {
-                      searchParams.delete("platform");
-                      setSearchParams(searchParams);
-                    }}
-                    className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
-                      !platform
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-secondary"
-                    }`}
-                    data-testid="filter-all"
-                  >
-                    جميع الفئات
-                  </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        searchParams.set("platform", cat.slug);
-                        setSearchParams(searchParams);
-                      }}
-                      className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
-                        platform === cat.slug
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-secondary"
-                      }`}
-                      data-testid={`filter-${cat.slug}`}
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              {(platform || searchParams.get("search") || featured) && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={clearFilters}
-                  data-testid="clear-filters"
-                >
-                  مسح الفلاتر
+      <div className="px-4 py-6 md:py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Mobile: Search & Filter Bar */}
+          <div className="flex gap-2 mb-4 lg:hidden">
+            <form onSubmit={handleSearch} className="flex-1 relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="بحث..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pr-10 h-11"
+              />
+            </form>
+            
+            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-11 w-11 flex-shrink-0">
+                  <SlidersHorizontal className="h-5 w-5" />
+                  {hasFilters && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                      !
+                    </span>
+                  )}
                 </Button>
-              )}
-            </div>
-          </aside>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80">
+                <SheetHeader>
+                  <SheetTitle>الفلاتر</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6">
+                  <FiltersContent />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
 
-          {/* Products Grid */}
-          <div className="flex-1">
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <p className="text-sm text-muted-foreground">
-                عرض {products.length} منتج
-              </p>
-              
-              <div className="flex items-center gap-3">
-                {/* Sort */}
+          <div className="flex gap-6 lg:gap-8">
+            {/* Desktop Sidebar */}
+            <aside className="hidden lg:block w-64 flex-shrink-0">
+              <div className="sticky top-24">
+                <FiltersContent />
+              </div>
+            </aside>
+
+            {/* Products Grid */}
+            <div className="flex-1">
+              {/* Toolbar */}
+              <div className="flex items-center justify-between gap-4 mb-4 md:mb-6">
+                <p className="text-sm text-muted-foreground">
+                  {loading ? "جاري التحميل..." : `${products.length} منتج`}
+                </p>
+                
                 <Select value={sortBy} onValueChange={handleSortChange}>
-                  <SelectTrigger className="w-40" data-testid="sort-select">
-                    <SelectValue placeholder="ترتيب حسب" />
+                  <SelectTrigger className="w-[140px] sm:w-[160px] h-10" data-testid="sort-select">
+                    <SelectValue placeholder="ترتيب" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="popular">الأكثر مبيعاً</SelectItem>
@@ -237,65 +288,39 @@ export default function ProductsPage() {
                     <SelectItem value="newest">الأحدث</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
 
-                {/* View Mode */}
-                <div className="hidden sm:flex items-center border border-border rounded-lg">
-                  <Button
-                    variant={viewMode === "grid" ? "default" : "ghost"}
-                    size="icon"
-                    className="rounded-l-none"
-                    onClick={() => setViewMode("grid")}
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
-                    size="icon"
-                    className="rounded-r-none"
-                    onClick={() => setViewMode("list")}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+              {/* Products */}
+              {loading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="space-y-3">
+                      <Skeleton className="aspect-[4/3] rounded-xl" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-9 w-full" />
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : products.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+                  {products.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 md:py-16">
+                  <div className="text-5xl md:text-6xl mb-4">🎮</div>
+                  <h3 className="font-heading text-lg md:text-xl font-bold mb-2">
+                    لا توجد منتجات
+                  </h3>
+                  <p className="text-sm md:text-base text-muted-foreground mb-6">
+                    جرب تغيير معايير البحث أو الفلاتر
+                  </p>
+                  <Button onClick={clearFilters}>مسح الفلاتر</Button>
+                </div>
+              )}
             </div>
-
-            {/* Products */}
-            {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="space-y-3">
-                    <Skeleton className="aspect-[4/3] rounded-xl" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ))}
-              </div>
-            ) : products.length > 0 ? (
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
-                    : "space-y-4"
-                }
-              >
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <div className="text-6xl mb-4">🎮</div>
-                <h3 className="font-heading text-xl font-bold mb-2">
-                  لا توجد منتجات
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  جرب تغيير معايير البحث أو الفلاتر
-                </p>
-                <Button onClick={clearFilters}>مسح الفلاتر</Button>
-              </div>
-            )}
           </div>
         </div>
       </div>
