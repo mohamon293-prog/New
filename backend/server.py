@@ -1460,6 +1460,12 @@ async def startup_db():
     await db.categories.create_index("slug", unique=True)
     await db.wallet_transactions.create_index("user_id")
     await db.reviews.create_index([("product_id", 1), ("user_id", 1)])
+    await db.discount_codes.create_index("code", unique=True)
+    await db.discount_codes.create_index("id", unique=True)
+    await db.notifications.create_index([("user_id", 1), ("is_read", 1)])
+    await db.notifications.create_index("id", unique=True)
+    await db.support_tickets.create_index("id", unique=True)
+    await db.support_tickets.create_index("user_id")
     
     logger.info("Database indexes created")
 
