@@ -293,13 +293,22 @@ const UsersManagement = () => {
 // Products Management
 const ProductsManagement = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [codesDialog, setCodesDialog] = useState(null);
   const [newCodes, setNewCodes] = useState("");
   const [addingCodes, setAddingCodes] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editProduct, setEditProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    name: "", name_en: "", slug: "", description: "", category_id: "",
+    price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "",
+    image_url: "", platform: "", region: "عالمي", is_featured: false
+  });
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   const fetchProducts = async () => {
@@ -311,6 +320,60 @@ const ProductsManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/categories`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Failed to fetch categories");
+    }
+  };
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        ...productForm,
+        price_jod: parseFloat(productForm.price_jod),
+        price_usd: parseFloat(productForm.price_usd),
+        original_price_jod: productForm.original_price_jod ? parseFloat(productForm.original_price_jod) : null,
+        original_price_usd: productForm.original_price_usd ? parseFloat(productForm.original_price_usd) : null,
+      };
+      
+      if (editProduct) {
+        await axios.put(`${API_URL}/admin/products/${editProduct.id}`, data, { headers: getAuthHeader() });
+        toast.success("تم تحديث المنتج");
+      } else {
+        await axios.post(`${API_URL}/admin/products`, data, { headers: getAuthHeader() });
+        toast.success("تم إنشاء المنتج");
+      }
+      setShowCreateDialog(false);
+      setEditProduct(null);
+      setProductForm({
+        name: "", name_en: "", slug: "", description: "", category_id: "",
+        price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "",
+        image_url: "", platform: "", region: "عالمي", is_featured: false
+      });
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "حدث خطأ");
+    }
+  };
+
+  const openEditProduct = (product) => {
+    setEditProduct(product);
+    setProductForm({
+      name: product.name, name_en: product.name_en, slug: product.slug,
+      description: product.description, category_id: product.category_id,
+      price_jod: product.price_jod, price_usd: product.price_usd,
+      original_price_jod: product.original_price_jod || "",
+      original_price_usd: product.original_price_usd || "",
+      image_url: product.image_url, platform: product.platform,
+      region: product.region, is_featured: product.is_featured
+    });
+    setShowCreateDialog(true);
   };
 
   const handleAddCodes = async () => {
@@ -324,7 +387,6 @@ const ProductsManagement = () => {
 
     setAddingCodes(true);
     try {
-      // Use the CSV upload endpoint with text content
       const response = await axios.post(
         `${API_URL}/admin/products/${codesDialog.id}/codes/upload`,
         codesText,
