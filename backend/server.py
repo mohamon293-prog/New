@@ -242,6 +242,66 @@ class AuthResponse(BaseModel):
     token_type: str = "bearer"
     user: UserResponse
 
+# Discount Code Models
+class DiscountCodeCreate(BaseModel):
+    code: str
+    discount_type: str = "percentage"  # percentage or fixed
+    discount_value: float
+    min_purchase: float = 0
+    max_uses: Optional[int] = None
+    valid_from: Optional[str] = None
+    valid_until: Optional[str] = None
+    applicable_products: Optional[List[str]] = None  # None = all products
+    applicable_categories: Optional[List[str]] = None
+
+class DiscountCodeResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    code: str
+    discount_type: str
+    discount_value: float
+    min_purchase: float
+    max_uses: Optional[int]
+    used_count: int
+    valid_from: Optional[str]
+    valid_until: Optional[str]
+    is_active: bool
+    created_at: str
+
+class ApplyDiscountRequest(BaseModel):
+    code: str
+    subtotal: float
+    product_ids: List[str] = []
+
+# Notification Models
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    title: str
+    message: str
+    type: str  # order, wallet, system, promo
+    is_read: bool
+    reference_id: Optional[str] = None
+    created_at: str
+
+# Product Update Model
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    name_en: Optional[str] = None
+    description: Optional[str] = None
+    description_en: Optional[str] = None
+    price_jod: Optional[float] = None
+    price_usd: Optional[float] = None
+    original_price_jod: Optional[float] = None
+    original_price_usd: Optional[float] = None
+    image_url: Optional[str] = None
+    platform: Optional[str] = None
+    region: Optional[str] = None
+    is_featured: Optional[bool] = None
+    is_active: Optional[bool] = None
+    category_id: Optional[str] = None
+
 # ==================== HELPER FUNCTIONS ====================
 
 def hash_password(password: str) -> str:
