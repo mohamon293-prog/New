@@ -856,11 +856,13 @@ export default function AdminDashboard() {
     if (path === "/admin") return "لوحة التحكم";
     if (path.includes("users")) return "المستخدمين";
     if (path.includes("products")) return "المنتجات";
+    if (path.includes("categories")) return "الأقسام";
     if (path.includes("orders")) return "الطلبات";
     if (path.includes("wallets")) return "المحافظ";
     if (path.includes("discounts")) return "أكواد الخصم";
     if (path.includes("notifications")) return "الإشعارات";
     if (path.includes("tickets")) return "الدعم الفني";
+    if (path.includes("settings")) return "إعدادات الموقع";
     return "لوحة التحكم";
   };
 
@@ -891,11 +893,13 @@ export default function AdminDashboard() {
             <Route index element={<div className="space-y-6"><DashboardStats /></div>} />
             <Route path="users" element={<UsersManagement />} />
             <Route path="products" element={<ProductsManagement />} />
+            <Route path="categories" element={<CategoriesManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
             <Route path="wallets" element={<WalletManagement />} />
             <Route path="discounts" element={<DiscountsManagement />} />
             <Route path="notifications" element={<NotificationsManagement />} />
             <Route path="tickets" element={<TicketsManagement />} />
+            <Route path="settings" element={<SiteSettings />} />
           </Routes>
         </div>
       </main>
