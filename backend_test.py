@@ -20,6 +20,8 @@ class GameloAPITester:
         self.failed_tests = []
         self.user_id = None
         self.admin_user_id = None
+        self.test_product_id = None
+        self.test_product_name = None
 
     def log_result(self, test_name: str, success: bool, details: str = ""):
         """Log test result"""
