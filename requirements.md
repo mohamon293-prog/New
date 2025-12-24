@@ -16,7 +16,7 @@ Build a production-ready digital marketplace named "Gamelo" (like Gamivo), fully
 - **Code Encryption**: Fernet symmetric encryption
 - **Styling**: Arabic RTL, Dark mode default, Cairo & IBM Plex Sans Arabic fonts
 
-## Completed Features (MVP)
+## Completed Features (MVP + Phase 2)
 
 ### User Features
 - [x] User registration & login (JWT auth)
@@ -27,18 +27,25 @@ Build a production-ready digital marketplace named "Gamelo" (like Gamivo), fully
 - [x] Product search & filtering
 - [x] Product detail pages with reviews
 - [x] Shopping cart functionality
+- [x] **Discount codes in cart** (NEW)
 - [x] Order placement from wallet balance
 - [x] Order history with code reveal
 - [x] Wallet balance & transaction history
 - [x] User profile management
 - [x] WhatsApp floating support button
+- [x] **In-app notifications** (NEW)
+- [x] **Support tickets** (NEW)
 
 ### Admin Features
 - [x] Admin dashboard with stats
 - [x] User management (view, activate/deactivate)
+- [x] **Products management with stock counts** (NEW)
+- [x] **Add codes to products (bulk upload)** (NEW)
 - [x] Order management
 - [x] Wallet credit functionality
-- [x] Products placeholder (ready for expansion)
+- [x] **Discount codes CRUD** (NEW)
+- [x] **Notifications broadcast to all users** (NEW)
+- [x] **Support tickets management & replies** (NEW)
 
 ### Security Features
 - [x] JWT authentication with refresh
