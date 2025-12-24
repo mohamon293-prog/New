@@ -1630,9 +1630,20 @@ async def get_site_settings(admin: dict = Depends(get_admin_user)):
             "description": "متجرك الموثوق لبطاقات PlayStation، Xbox، Steam، Nintendo وأكثر. آلاف العملاء السعداء في الأردن والشرق الأوسط.",
             "whatsapp_number": "+962791234567",
             "email": "support@gamelo.org",
+            # Logo and Images
+            "logo_url": "",
+            "logo_dark_url": "",
+            "favicon_url": "",
+            "hero_image_url": "https://images.unsplash.com/photo-1592155931584-901ac15763e3?w=800",
             "hero_title": "أكواد ألعاب رقمية",
             "hero_subtitle": "بأفضل الأسعار",
             "hero_description": "متجرك الموثوق لبطاقات PlayStation، Xbox، Steam، Nintendo وأكثر. آلاف العملاء السعداء في الأردن والشرق الأوسط.",
+            # Banners
+            "banners": [
+                {"id": "1", "image_url": "", "title": "", "link": "", "is_active": True},
+                {"id": "2", "image_url": "", "title": "", "link": "", "is_active": False},
+                {"id": "3", "image_url": "", "title": "", "link": "", "is_active": False}
+            ],
             "stats": {
                 "customers": "50,000+",
                 "orders": "100,000+",
@@ -1647,7 +1658,9 @@ async def get_site_settings(admin: dict = Depends(get_admin_user)):
             "social_links": {
                 "instagram": "",
                 "twitter": "",
-                "facebook": ""
+                "facebook": "",
+                "tiktok": "",
+                "youtube": ""
             }
         }
     
