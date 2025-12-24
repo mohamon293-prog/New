@@ -239,6 +239,105 @@ class GameloAPITester:
         else:
             self.log_result("Admin orders endpoint", False, f"Response: {response}")
 
+        # Test admin products endpoint
+        success, response = self.make_request('GET', '/admin/products', use_admin=True)
+        if success and isinstance(response, list):
+            product_count = len(response)
+            self.log_result("Admin products endpoint", True, f"Found {product_count} products")
+        else:
+            self.log_result("Admin products endpoint", False, f"Response: {response}")
+
+    def test_discount_codes(self):
+        """Test discount code functionality"""
+        if not self.admin_token:
+            self.log_result("Discount codes", False, "No admin token available")
+            return
+
+        # Test get all discounts
+        success, response = self.make_request('GET', '/admin/discounts', use_admin=True)
+        if success and isinstance(response, list):
+            discount_count = len(response)
+            self.log_result("Get admin discounts", True, f"Found {discount_count} discount codes")
+        else:
+            self.log_result("Get admin discounts", False, f"Response: {response}")
+
+        # Test create discount code
+        discount_data = {
+            "code": "TESTCODE10",
+            "discount_type": "percentage",
+            "discount_value": 10,
+            "min_purchase": 5,
+            "max_uses": 100
+        }
+        success, response = self.make_request('POST', '/admin/discounts', discount_data, use_admin=True)
+        if success and 'id' in response:
+            discount_id = response['id']
+            self.log_result("Create discount code", True, f"Created discount: {response['code']}")
+            
+            # Test apply discount code (user endpoint)
+            if self.token:
+                apply_data = {
+                    "code": "TESTCODE10",
+                    "subtotal": 20.0,
+                    "product_ids": []
+                }
+                success2, response2 = self.make_request('POST', '/discounts/apply', apply_data)
+                if success2 and response2.get('valid'):
+                    discount_amount = response2.get('discount_amount', 0)
+                    self.log_result("Apply discount code", True, f"Discount applied: {discount_amount} JOD")
+                else:
+                    self.log_result("Apply discount code", False, f"Response: {response2}")
+        else:
+            self.log_result("Create discount code", False, f"Response: {response}")
+
+    def test_notifications(self):
+        """Test notifications functionality"""
+        if not self.token:
+            self.log_result("Notifications", False, "No user token available")
+            return
+
+        # Test get notifications
+        success, response = self.make_request('GET', '/notifications')
+        if success and isinstance(response, list):
+            notif_count = len(response)
+            self.log_result("Get notifications", True, f"Found {notif_count} notifications")
+        else:
+            self.log_result("Get notifications", False, f"Response: {response}")
+
+        # Test get unread count
+        success, response = self.make_request('GET', '/notifications/count')
+        if success and 'unread_count' in response:
+            unread_count = response['unread_count']
+            self.log_result("Get unread count", True, f"Unread notifications: {unread_count}")
+        else:
+            self.log_result("Get unread count", False, f"Response: {response}")
+
+        # Test admin broadcast (if admin token available)
+        if self.admin_token:
+            broadcast_data = {
+                "title": "Test Notification",
+                "message": "This is a test broadcast message"
+            }
+            success, response = self.make_request('POST', '/admin/notifications/broadcast', broadcast_data, use_admin=True)
+            if success and 'message' in response:
+                self.log_result("Admin broadcast notification", True, response['message'])
+            else:
+                self.log_result("Admin broadcast notification", False, f"Response: {response}")
+
+    def test_support_tickets_admin(self):
+        """Test admin support ticket functionality"""
+        if not self.admin_token:
+            self.log_result("Admin tickets", False, "No admin token available")
+            return
+
+        # Test get all tickets
+        success, response = self.make_request('GET', '/admin/tickets', use_admin=True)
+        if success and isinstance(response, list):
+            ticket_count = len(response)
+            self.log_result("Admin get tickets", True, f"Found {ticket_count} tickets")
+        else:
+            self.log_result("Admin get tickets", False, f"Response: {response}")
+
     def test_unauthorized_access(self):
         """Test that protected endpoints require authentication"""
         # Test without token
