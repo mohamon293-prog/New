@@ -109,17 +109,11 @@ Build a production-ready digital marketplace named "Gamelo" (like Gamivo), fully
 
 ## Next Action Items
 
-### Phase 2 - Essential
-1. **Products Admin UI**: Complete CRUD for products in admin dashboard
-2. **Codes Management**: Admin UI for uploading codes (CSV import)
-3. **Order Details**: View full order details in admin
-4. **User Search**: Admin search/filter for users
-
 ### Phase 3 - Business Features
-1. **Discount Codes**: Promo code system
-2. **Referral System**: User referral program
-3. **Notifications**: In-app notification system
-4. **Email Notifications**: Order confirmations
+1. **Referral System**: User referral program with wallet credits
+2. **Email Notifications**: Order confirmations via email
+3. **Analytics Dashboard**: Sales reports, charts, graphs
+4. **Product Reviews in Admin**: Manage/moderate user reviews
 
 ### Phase 4 - Security Enhancements
 1. **2FA**: Admin two-factor authentication
@@ -128,6 +122,6 @@ Build a production-ready digital marketplace named "Gamelo" (like Gamivo), fully
 4. **Device Fingerprinting**: Enhanced security
 
 ### Phase 5 - Operations
-1. **Analytics Dashboard**: Sales reports, charts
-2. **Backup System**: Database backup automation
-3. **SEO**: Meta tags, sitemap, schema markup
+1. **Backup System**: Database backup automation
+2. **SEO**: Meta tags, sitemap, schema markup
+3. **Multi-language**: Add English support option
