@@ -707,6 +707,18 @@ async def create_order(order_data: OrderCreate, request: Request, user: dict = D
     
     await log_activity(user_id, "purchase", {"order_id": order_id, "product": product["name"]}, request)
     
+    # Create notification for successful purchase
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": "تم إنشاء طلبك بنجاح",
+        "message": f"تم شراء {product['name']} بنجاح. اذهب لصفحة الطلبات لكشف الكود.",
+        "type": "order",
+        "is_read": False,
+        "reference_id": order_id,
+        "created_at": now
+    })
+    
     return OrderResponse(
         id=order_id,
         user_id=user_id,
