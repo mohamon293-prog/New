@@ -1042,6 +1042,379 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
         "revenue_usd": revenue[0]["total_usd"] if revenue else 0
     }
 
+# ==================== ADMIN PRODUCTS MANAGEMENT ====================
+
+@api_router.get("/admin/products")
+async def get_admin_products(admin: dict = Depends(get_admin_user), skip: int = 0, limit: int = 50):
+    """Get all products with stock counts for admin"""
+    products = await db.products.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for product in products:
+        stock = await db.product_codes.count_documents({
+            "product_id": product["id"],
+            "status": "unused"
+        })
+        product["stock_count"] = stock
+        
+        if product.get("category_id"):
+            cat = await db.categories.find_one({"id": product["category_id"]}, {"_id": 0, "name": 1})
+            product["category_name"] = cat["name"] if cat else None
+    
+    return products
+
+@api_router.put("/admin/products/{product_id}")
+async def update_product(product_id: str, updates: ProductUpdate, admin: dict = Depends(get_admin_user)):
+    """Update product details"""
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="لا توجد تحديثات")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.products.update_one({"id": product_id}, {"$set": update_data})
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    
+    # Log admin action
+    await db.admin_actions.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin["id"],
+        "action": "update_product",
+        "target_id": product_id,
+        "details": update_data,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "تم تحديث المنتج بنجاح"}
+
+@api_router.delete("/admin/products/{product_id}")
+async def delete_product(product_id: str, admin: dict = Depends(get_admin_user)):
+    """Soft delete product (set is_active to False)"""
+    result = await db.products.update_one(
+        {"id": product_id},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    
+    return {"message": "تم حذف المنتج"}
+
+@api_router.get("/admin/products/{product_id}/codes")
+async def get_product_codes(product_id: str, admin: dict = Depends(get_admin_user), status: Optional[str] = None):
+    """Get codes for a product (admin only)"""
+    query = {"product_id": product_id}
+    if status:
+        query["status"] = status
+    
+    codes = await db.product_codes.find(query, {"_id": 0, "encrypted_code": 0}).to_list(1000)
+    
+    # Get stats
+    total = await db.product_codes.count_documents({"product_id": product_id})
+    unused = await db.product_codes.count_documents({"product_id": product_id, "status": "unused"})
+    used = await db.product_codes.count_documents({"product_id": product_id, "status": {"$in": ["assigned", "revealed"]}})
+    
+    return {
+        "codes": codes,
+        "stats": {
+            "total": total,
+            "unused": unused,
+            "used": used
+        }
+    }
+
+# ==================== DISCOUNT CODES ====================
+
+@api_router.post("/admin/discounts", response_model=DiscountCodeResponse)
+async def create_discount_code(discount: DiscountCodeCreate, admin: dict = Depends(get_admin_user)):
+    """Create a new discount code"""
+    # Check if code already exists
+    existing = await db.discount_codes.find_one({"code": discount.code.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="كود الخصم موجود مسبقاً")
+    
+    discount_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    discount_doc = {
+        "id": discount_id,
+        "code": discount.code.upper(),
+        "discount_type": discount.discount_type,
+        "discount_value": discount.discount_value,
+        "min_purchase": discount.min_purchase,
+        "max_uses": discount.max_uses,
+        "used_count": 0,
+        "valid_from": discount.valid_from,
+        "valid_until": discount.valid_until,
+        "applicable_products": discount.applicable_products,
+        "applicable_categories": discount.applicable_categories,
+        "is_active": True,
+        "created_by": admin["id"],
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.discount_codes.insert_one(discount_doc)
+    
+    return discount_doc
+
+@api_router.get("/admin/discounts", response_model=List[DiscountCodeResponse])
+async def get_all_discounts(admin: dict = Depends(get_admin_user)):
+    """Get all discount codes"""
+    discounts = await db.discount_codes.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return discounts
+
+@api_router.patch("/admin/discounts/{discount_id}")
+async def update_discount(discount_id: str, updates: Dict[str, Any], admin: dict = Depends(get_admin_user)):
+    """Update discount code"""
+    allowed = {"is_active", "max_uses", "valid_until", "discount_value", "min_purchase"}
+    filtered = {k: v for k, v in updates.items() if k in allowed}
+    
+    if not filtered:
+        raise HTTPException(status_code=400, detail="لا توجد تحديثات صالحة")
+    
+    filtered["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.discount_codes.update_one({"id": discount_id}, {"$set": filtered})
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="كود الخصم غير موجود")
+    
+    return {"message": "تم تحديث كود الخصم"}
+
+@api_router.delete("/admin/discounts/{discount_id}")
+async def delete_discount(discount_id: str, admin: dict = Depends(get_admin_user)):
+    """Deactivate discount code"""
+    result = await db.discount_codes.update_one(
+        {"id": discount_id},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="كود الخصم غير موجود")
+    
+    return {"message": "تم حذف كود الخصم"}
+
+@api_router.post("/discounts/apply")
+async def apply_discount_code(request: ApplyDiscountRequest, user: dict = Depends(get_current_user)):
+    """Validate and apply discount code"""
+    code = request.code.upper()
+    
+    discount = await db.discount_codes.find_one({"code": code, "is_active": True}, {"_id": 0})
+    
+    if not discount:
+        raise HTTPException(status_code=404, detail="كود الخصم غير صالح")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Check validity period
+    if discount.get("valid_from"):
+        valid_from = datetime.fromisoformat(discount["valid_from"].replace("Z", "+00:00"))
+        if now < valid_from:
+            raise HTTPException(status_code=400, detail="كود الخصم غير فعال بعد")
+    
+    if discount.get("valid_until"):
+        valid_until = datetime.fromisoformat(discount["valid_until"].replace("Z", "+00:00"))
+        if now > valid_until:
+            raise HTTPException(status_code=400, detail="انتهت صلاحية كود الخصم")
+    
+    # Check max uses
+    if discount.get("max_uses") and discount["used_count"] >= discount["max_uses"]:
+        raise HTTPException(status_code=400, detail="تم استخدام كود الخصم الحد الأقصى من المرات")
+    
+    # Check minimum purchase
+    if request.subtotal < discount["min_purchase"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"الحد الأدنى للشراء {discount['min_purchase']} د.أ"
+        )
+    
+    # Calculate discount
+    if discount["discount_type"] == "percentage":
+        discount_amount = request.subtotal * (discount["discount_value"] / 100)
+    else:
+        discount_amount = min(discount["discount_value"], request.subtotal)
+    
+    return {
+        "valid": True,
+        "code": code,
+        "discount_type": discount["discount_type"],
+        "discount_value": discount["discount_value"],
+        "discount_amount": round(discount_amount, 2),
+        "final_total": round(request.subtotal - discount_amount, 2)
+    }
+
+# ==================== NOTIFICATIONS ====================
+
+async def create_notification(user_id: str, title: str, message: str, notif_type: str, reference_id: str = None):
+    """Helper function to create notifications"""
+    notif_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": title,
+        "message": message,
+        "type": notif_type,
+        "is_read": False,
+        "reference_id": reference_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notif_doc)
+    return notif_doc
+
+@api_router.get("/notifications", response_model=List[NotificationResponse])
+async def get_notifications(user: dict = Depends(get_current_user), unread_only: bool = False):
+    """Get user notifications"""
+    query = {"user_id": user["id"]}
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(query, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
+    return notifications
+
+@api_router.get("/notifications/count")
+async def get_unread_count(user: dict = Depends(get_current_user)):
+    """Get unread notification count"""
+    count = await db.notifications.count_documents({"user_id": user["id"], "is_read": False})
+    return {"unread_count": count}
+
+@api_router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
+    """Mark notification as read"""
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": user["id"]},
+        {"$set": {"is_read": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="الإشعار غير موجود")
+    
+    return {"message": "تم التحديث"}
+
+@api_router.post("/notifications/read-all")
+async def mark_all_notifications_read(user: dict = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"user_id": user["id"], "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "تم تحديث جميع الإشعارات"}
+
+@api_router.post("/admin/notifications/broadcast")
+async def broadcast_notification(
+    title: str = Body(...),
+    message: str = Body(...),
+    admin: dict = Depends(get_admin_user)
+):
+    """Send notification to all users"""
+    users = await db.users.find({"is_active": True}, {"_id": 0, "id": 1}).to_list(10000)
+    
+    now = datetime.now(timezone.utc).isoformat()
+    notifications = [
+        {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "title": title,
+            "message": message,
+            "type": "system",
+            "is_read": False,
+            "reference_id": None,
+            "created_at": now
+        }
+        for user in users
+    ]
+    
+    if notifications:
+        await db.notifications.insert_many(notifications)
+    
+    return {"message": f"تم إرسال الإشعار لـ {len(notifications)} مستخدم"}
+
+# ==================== ADMIN CATEGORIES ====================
+
+@api_router.put("/admin/categories/{category_id}")
+async def update_category(category_id: str, updates: Dict[str, Any], admin: dict = Depends(get_admin_user)):
+    """Update category"""
+    allowed = {"name", "name_en", "description", "image_url", "order", "is_active"}
+    filtered = {k: v for k, v in updates.items() if k in allowed}
+    
+    if not filtered:
+        raise HTTPException(status_code=400, detail="لا توجد تحديثات صالحة")
+    
+    filtered["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.categories.update_one({"id": category_id}, {"$set": filtered})
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="الفئة غير موجودة")
+    
+    return {"message": "تم تحديث الفئة"}
+
+# ==================== ADMIN SUPPORT TICKETS ====================
+
+@api_router.get("/admin/tickets")
+async def get_all_tickets(admin: dict = Depends(get_admin_user), status: Optional[str] = None):
+    """Get all support tickets"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    tickets = await db.support_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return tickets
+
+@api_router.patch("/admin/tickets/{ticket_id}")
+async def update_ticket_status(ticket_id: str, status: str = Body(..., embed=True), admin: dict = Depends(get_admin_user)):
+    """Update ticket status"""
+    if status not in ["open", "in_progress", "resolved", "closed"]:
+        raise HTTPException(status_code=400, detail="حالة غير صالحة")
+    
+    result = await db.support_tickets.update_one(
+        {"id": ticket_id},
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="التذكرة غير موجودة")
+    
+    return {"message": "تم تحديث حالة التذكرة"}
+
+@api_router.post("/admin/tickets/{ticket_id}/reply")
+async def reply_to_ticket(ticket_id: str, message: str = Body(..., embed=True), admin: dict = Depends(get_admin_user)):
+    """Add admin reply to ticket"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    reply = {
+        "id": str(uuid.uuid4()),
+        "user_id": admin["id"],
+        "is_admin": True,
+        "message": message,
+        "created_at": now
+    }
+    
+    result = await db.support_tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$push": {"messages": reply},
+            "$set": {"updated_at": now, "status": "in_progress"}
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="التذكرة غير موجودة")
+    
+    # Notify user
+    ticket = await db.support_tickets.find_one({"id": ticket_id}, {"_id": 0, "user_id": 1, "subject": 1})
+    if ticket:
+        await create_notification(
+            ticket["user_id"],
+            "رد جديد على تذكرتك",
+            f"تم الرد على تذكرة: {ticket['subject']}",
+            "system",
+            ticket_id
+        )
+    
+    return {"message": "تم إضافة الرد"}
+
 # ==================== STATIC DATA ====================
 
 @api_router.get("/platforms")
