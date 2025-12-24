@@ -35,10 +35,10 @@ class GameloAPITester:
             self.failed_tests.append({"test": test_name, "details": details})
 
     def make_request(self, method: str, endpoint: str, data: Optional[Dict] = None, 
-                    use_admin: bool = False, expected_status: int = 200) -> tuple:
+                    use_admin: bool = False, expected_status: int = 200, content_type: str = 'application/json') -> tuple:
         """Make HTTP request with proper headers"""
         url = f"{self.base_url}/api/{endpoint.lstrip('/')}"
-        headers = {'Content-Type': 'application/json'}
+        headers = {'Content-Type': content_type}
         
         # Add auth token if available
         token = self.admin_token if use_admin and self.admin_token else self.token
@@ -49,7 +49,10 @@ class GameloAPITester:
             if method == 'GET':
                 response = requests.get(url, headers=headers, timeout=30)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=30)
+                if content_type == 'text/plain':
+                    response = requests.post(url, data=data, headers=headers, timeout=30)
+                else:
+                    response = requests.post(url, json=data, headers=headers, timeout=30)
             elif method == 'PATCH':
                 response = requests.patch(url, json=data, headers=headers, timeout=30)
             else:
