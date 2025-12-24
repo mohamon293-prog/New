@@ -247,6 +247,11 @@ class GameloAPITester:
         if success and isinstance(response, list):
             product_count = len(response)
             self.log_result("Admin products endpoint", True, f"Found {product_count} products")
+            
+            # Store first product ID for CSV upload tests
+            if product_count > 0:
+                self.test_product_id = response[0]['id']
+                self.test_product_name = response[0]['name']
         else:
             self.log_result("Admin products endpoint", False, f"Response: {response}")
 
