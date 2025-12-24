@@ -65,11 +65,13 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     { icon: LayoutDashboard, label: "لوحة التحكم", path: "/admin" },
     { icon: Users, label: "المستخدمين", path: "/admin/users" },
     { icon: Package, label: "المنتجات", path: "/admin/products" },
+    { icon: Tag, label: "الأقسام", path: "/admin/categories" },
     { icon: ShoppingCart, label: "الطلبات", path: "/admin/orders" },
     { icon: Wallet, label: "المحافظ", path: "/admin/wallets" },
     { icon: Tag, label: "أكواد الخصم", path: "/admin/discounts" },
     { icon: Bell, label: "الإشعارات", path: "/admin/notifications" },
     { icon: MessageSquare, label: "الدعم الفني", path: "/admin/tickets" },
+    { icon: Edit, label: "إعدادات الموقع", path: "/admin/settings" },
   ];
 
   const handleLogout = () => {
