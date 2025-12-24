@@ -1137,6 +1137,162 @@ async def get_product_codes(product_id: str, admin: dict = Depends(get_admin_use
         }
     }
 
+@api_router.post("/admin/products/{product_id}/codes/upload")
+async def upload_product_codes_csv(
+    product_id: str,
+    request: Request,
+    admin: dict = Depends(get_admin_user)
+):
+    """Upload product codes via CSV (one code per line or comma separated)"""
+    import io
+    import csv
+    
+    # Verify product exists
+    product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    
+    # Get raw body content
+    body = await request.body()
+    content = body.decode('utf-8')
+    
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="الملف فارغ")
+    
+    # Parse codes - handle multiple formats
+    codes = []
+    lines = content.strip().split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line.lower().startswith('code'):  # Skip header
+            continue
+        
+        # Handle comma-separated values in a line
+        if ',' in line:
+            parts = line.split(',')
+            for part in parts:
+                part = part.strip().strip('"').strip("'")
+                if part and len(part) >= 3:  # Minimum code length
+                    codes.append(part)
+        else:
+            line = line.strip('"').strip("'")
+            if len(line) >= 3:
+                codes.append(line)
+    
+    if not codes:
+        raise HTTPException(status_code=400, detail="لم يتم العثور على أكواد صالحة")
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_codes = []
+    for code in codes:
+        if code not in seen:
+            seen.add(code)
+            unique_codes.append(code)
+    
+    # Check for existing codes in database
+    existing_codes = await db.product_codes.find(
+        {"$or": [{"code_value": {"$in": unique_codes}}, {"encrypted_code": {"$in": [encrypt_code(c) for c in unique_codes]}}]},
+        {"_id": 0, "code_value": 1}
+    ).to_list(len(unique_codes))
+    
+    existing_set = set(c.get("code_value") for c in existing_codes if c.get("code_value"))
+    
+    # Filter out existing codes
+    new_codes = [c for c in unique_codes if c not in existing_set]
+    
+    if not new_codes:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"جميع الأكواد ({len(unique_codes)}) موجودة مسبقاً"
+        )
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Prepare code documents
+    code_docs = []
+    for code in new_codes:
+        code_id = str(uuid.uuid4())
+        code_docs.append({
+            "id": code_id,
+            "product_id": product_id,
+            "code_value": code,  # Store original for reference
+            "encrypted_code": encrypt_code(code),
+            "status": "unused",
+            "created_at": now,
+            "created_by": admin["id"],
+            "uploaded_via": "csv"
+        })
+    
+    # Bulk insert
+    if code_docs:
+        await db.product_codes.insert_many(code_docs)
+    
+    # Log admin action
+    await db.admin_actions.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin["id"],
+        "action": "upload_codes_csv",
+        "target_id": product_id,
+        "details": {
+            "total_in_file": len(unique_codes),
+            "duplicates_skipped": len(unique_codes) - len(new_codes),
+            "codes_added": len(new_codes)
+        },
+        "created_at": now
+    })
+    
+    await log_activity(admin["id"], "upload_codes_csv", {
+        "product_id": product_id,
+        "codes_added": len(new_codes)
+    }, request)
+    
+    return {
+        "message": f"تم رفع {len(new_codes)} كود بنجاح",
+        "total_in_file": len(unique_codes),
+        "duplicates_skipped": len(unique_codes) - len(new_codes),
+        "codes_added": len(new_codes)
+    }
+
+@api_router.post("/admin/products/{product_id}/codes/add")
+async def add_single_code(
+    product_id: str,
+    request: Request,
+    admin: dict = Depends(get_admin_user),
+    code: str = Body(..., embed=True)
+):
+    """Add a single product code"""
+    # Verify product exists
+    product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    
+    code = code.strip()
+    if len(code) < 3:
+        raise HTTPException(status_code=400, detail="الكود قصير جداً")
+    
+    # Check if code exists
+    existing = await db.product_codes.find_one({"code_value": code})
+    if existing:
+        raise HTTPException(status_code=400, detail="الكود موجود مسبقاً")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    code_id = str(uuid.uuid4())
+    
+    await db.product_codes.insert_one({
+        "id": code_id,
+        "product_id": product_id,
+        "code_value": code,
+        "encrypted_code": encrypt_code(code),
+        "status": "unused",
+        "created_at": now,
+        "created_by": admin["id"],
+        "uploaded_via": "manual"
+    })
+    
+    return {"message": "تم إضافة الكود بنجاح", "code_id": code_id}
+
 # ==================== DISCOUNT CODES ====================
 
 @api_router.post("/admin/discounts", response_model=DiscountCodeResponse)
