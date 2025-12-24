@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { Button } from "../ui/button";
@@ -23,16 +24,59 @@ import {
   Sun,
   Search,
   Gamepad2,
+  Bell,
 } from "lucide-react";
-import { formatPrice } from "../../lib/utils";
+import { formatPrice, API_URL, getAuthHeader } from "../../lib/utils";
 
 export const Header = () => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, token } = useAuth();
   const { getItemCount, currency, toggleCurrency } = useCart();
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (token) {
+      fetchUnreadCount();
+    }
+  }, [token]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/notifications/count`, {
+        headers: getAuthHeader(),
+      });
+      setUnreadCount(response.data.unread_count);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/notifications?unread_only=false`, {
+        headers: getAuthHeader(),
+      });
+      setNotifications(response.data.slice(0, 5));
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await axios.post(`${API_URL}/notifications/read-all`, {}, {
+        headers: getAuthHeader(),
+      });
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error("Failed to mark notifications read:", error);
+    }
+  };
 
   const toggleTheme = () => {
     const html = document.documentElement;
