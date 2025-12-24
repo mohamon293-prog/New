@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "../ui/sheet";
 import {
   Menu,
   ShoppingCart,
@@ -25,8 +25,11 @@ import {
   Search,
   Gamepad2,
   Bell,
+  Home,
+  ChevronLeft,
+  X,
 } from "lucide-react";
-import { formatPrice, API_URL, getAuthHeader } from "../../lib/utils";
+import { API_URL, getAuthHeader } from "../../lib/utils";
 
 export const Header = () => {
   const { user, logout, isAdmin, token } = useAuth();
@@ -34,6 +37,7 @@ export const Header = () => {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -95,12 +99,14 @@ export const Header = () => {
     if (searchQuery.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery("");
+      setSearchOpen(false);
     }
   };
 
   const handleLogout = () => {
     logout();
     navigate("/");
+    setMobileMenuOpen(false);
   };
 
   const navLinks = [
@@ -112,311 +118,393 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="section-container">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 font-heading text-2xl font-black"
-            data-testid="logo-link"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Gamepad2 className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
-              قيملو
-            </span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                data-testid={`nav-link-${link.label}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Search Bar */}
-          <form
-            onSubmit={handleSearch}
-            className="hidden lg:flex items-center flex-1 max-w-md mx-6"
-          >
-            <div className="relative w-full">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="ابحث عن منتج..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 pr-10 pl-4 rounded-lg border border-input bg-secondary/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                data-testid="search-input"
-              />
-            </div>
-          </form>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {/* Currency Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleCurrency}
-              className="hidden sm:flex text-xs font-bold"
-              data-testid="currency-toggle"
+      <div className="px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex h-14 md:h-16 items-center justify-between gap-4">
+            {/* Logo */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 font-heading text-xl md:text-2xl font-black flex-shrink-0"
+              data-testid="logo-link"
             >
-              {currency === "JOD" ? "د.أ" : "$"}
-            </Button>
+              <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg bg-primary">
+                <Gamepad2 className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
+              </div>
+              <span className="bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent">
+                قيملو
+              </span>
+            </Link>
 
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="hidden sm:flex"
-              data-testid="theme-toggle"
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center gap-6">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+
+            {/* Desktop Search Bar */}
+            <form
+              onSubmit={handleSearch}
+              className="hidden lg:flex items-center flex-1 max-w-md mx-6"
             >
-              {isDark ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </Button>
+              <div className="relative w-full">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="ابحث عن منتج..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-10 pr-10 pl-4 rounded-lg border border-input bg-secondary/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  data-testid="search-input"
+                />
+              </div>
+            </form>
 
-            {/* Cart */}
-            <Link to="/cart">
+            {/* Actions */}
+            <div className="flex items-center gap-1 md:gap-2">
+              {/* Mobile Search Button */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative"
-                data-testid="cart-button"
+                className="lg:hidden h-9 w-9"
+                onClick={() => setSearchOpen(!searchOpen)}
               >
-                <ShoppingCart className="h-5 w-5" />
-                {getItemCount() > 0 && (
-                  <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                    {getItemCount()}
-                  </span>
-                )}
+                <Search className="h-5 w-5" />
               </Button>
-            </Link>
 
-            {/* Notifications */}
-            {user && (
-              <DropdownMenu onOpenChange={(open) => open && fetchNotifications()}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative"
-                    data-testid="notifications-button"
-                  >
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-80">
-                  <div className="flex items-center justify-between px-2 py-1.5">
-                    <span className="font-medium">الإشعارات</span>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={markAllRead}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        تحديد الكل كمقروء
-                      </button>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  {notifications.length > 0 ? (
-                    notifications.map((notif) => (
-                      <DropdownMenuItem key={notif.id} className="flex-col items-start">
-                        <span className={`text-sm ${notif.is_read ? "text-muted-foreground" : "font-medium"}`}>
-                          {notif.title}
-                        </span>
-                        <span className="text-xs text-muted-foreground line-clamp-1">
-                          {notif.message}
-                        </span>
-                      </DropdownMenuItem>
-                    ))
-                  ) : (
-                    <div className="py-4 text-center text-sm text-muted-foreground">
-                      لا توجد إشعارات
-                    </div>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+              {/* Currency Toggle - Desktop */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleCurrency}
+                className="hidden sm:flex text-xs font-bold h-9 px-3"
+                data-testid="currency-toggle"
+              >
+                {currency === "JOD" ? "د.أ" : "$"}
+              </Button>
 
-            {/* User Menu */}
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    data-testid="user-menu-trigger"
-                  >
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/wallet" className="flex items-center gap-2">
-                      <Wallet className="h-4 w-4" />
-                      المحفظة
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/orders" className="flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      طلباتي
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      الإعدادات
-                    </Link>
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link
-                          to="/admin"
-                          className="flex items-center gap-2 text-primary"
+              {/* Theme Toggle - Desktop */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="hidden sm:flex h-9 w-9"
+                data-testid="theme-toggle"
+              >
+                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+
+              {/* Notifications */}
+              {user && (
+                <DropdownMenu onOpenChange={(open) => open && fetchNotifications()}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative h-9 w-9"
+                      data-testid="notifications-button"
+                    >
+                      <Bell className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -left-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-72 md:w-80">
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <span className="font-medium text-sm">الإشعارات</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllRead}
+                          className="text-xs text-primary hover:underline"
                         >
-                          <Settings className="h-4 w-4" />
-                          لوحة التحكم
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="text-destructive"
-                    data-testid="logout-button"
-                  >
-                    <LogOut className="h-4 w-4 ml-2" />
-                    تسجيل الخروج
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="hidden sm:flex items-center gap-2">
-                <Link to="/login">
-                  <Button variant="ghost" size="sm" data-testid="login-button">
-                    تسجيل الدخول
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button size="sm" data-testid="register-button">
-                    إنشاء حساب
-                  </Button>
-                </Link>
-              </div>
-            )}
+                          تحديد الكل كمقروء
+                        </button>
+                      )}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                          <DropdownMenuItem key={notif.id} className="flex-col items-start py-2.5 px-3">
+                            <span className={`text-sm ${notif.is_read ? "text-muted-foreground" : "font-medium"}`}>
+                              {notif.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                              {notif.message}
+                            </span>
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          لا توجد إشعارات
+                        </div>
+                      )}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
-            {/* Mobile Menu */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
+              {/* Cart */}
+              <Link to="/cart">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden"
-                  data-testid="mobile-menu-trigger"
+                  className="relative h-9 w-9"
+                  data-testid="cart-button"
                 >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-80">
-                <div className="flex flex-col gap-6 mt-6">
-                  {/* Mobile Search */}
-                  <form onSubmit={handleSearch}>
-                    <div className="relative">
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        placeholder="ابحث عن منتج..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-10 pr-10 pl-4 rounded-lg border border-input bg-secondary/50 text-sm"
-                      />
-                    </div>
-                  </form>
-
-                  {/* Mobile Nav Links */}
-                  <nav className="flex flex-col gap-2">
-                    {navLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        to={link.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="px-4 py-2 rounded-lg text-foreground hover:bg-secondary transition-colors"
-                      >
-                        {link.label}
-                      </Link>
-                    ))}
-                  </nav>
-
-                  {/* Mobile Auth */}
-                  {!user && (
-                    <div className="flex flex-col gap-2">
-                      <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="outline" className="w-full">
-                          تسجيل الدخول
-                        </Button>
-                      </Link>
-                      <Link
-                        to="/register"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Button className="w-full">إنشاء حساب</Button>
-                      </Link>
-                    </div>
+                  <ShoppingCart className="h-5 w-5" />
+                  {getItemCount() > 0 && (
+                    <span className="absolute -top-0.5 -left-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                      {getItemCount()}
+                    </span>
                   )}
+                </Button>
+              </Link>
 
-                  {/* Mobile Settings */}
-                  <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-secondary/50">
-                    <span className="text-sm">العملة</span>
+              {/* User Menu - Desktop */}
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={toggleCurrency}
-                      className="font-bold"
+                      size="icon"
+                      className="hidden sm:flex h-9 w-9"
+                      data-testid="user-menu-trigger"
                     >
-                      {currency === "JOD" ? "د.أ" : "$"}
+                      <User className="h-5 w-5" />
                     </Button>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-secondary/50">
-                    <span className="text-sm">المظهر</span>
-                    <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                      {isDark ? (
-                        <Sun className="h-5 w-5" />
-                      ) : (
-                        <Moon className="h-5 w-5" />
-                      )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <div className="px-3 py-2">
+                      <p className="font-medium text-sm">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/wallet" className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4" />
+                        المحفظة
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/orders" className="flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        طلباتي
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        الإعدادات
+                      </Link>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin" className="flex items-center gap-2 text-primary">
+                            <Settings className="h-4 w-4" />
+                            لوحة التحكم
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                      <LogOut className="h-4 w-4 ml-2" />
+                      تسجيل الخروج
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="hidden sm:flex items-center gap-2">
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm" className="h-9" data-testid="login-button">
+                      دخول
                     </Button>
-                  </div>
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm" className="h-9" data-testid="register-button">
+                      حساب جديد
+                    </Button>
+                  </Link>
                 </div>
-              </SheetContent>
-            </Sheet>
+              )}
+
+              {/* Mobile Menu Button */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="sm:hidden h-9 w-9"
+                    data-testid="mobile-menu-trigger"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[85vw] max-w-sm p-0">
+                  <div className="flex flex-col h-full">
+                    {/* Header */}
+                    <div className="p-4 border-b border-border">
+                      <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+                          <Gamepad2 className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                        <span className="font-heading text-xl font-black">قيملو</span>
+                      </Link>
+                    </div>
+
+                    {/* User Info (if logged in) */}
+                    {user && (
+                      <div className="p-4 border-b border-border bg-secondary/30">
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                    )}
+
+                    {/* Nav Links */}
+                    <nav className="flex-1 overflow-y-auto p-2">
+                      <div className="space-y-1">
+                        <Link
+                          to="/"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors"
+                        >
+                          <Home className="h-5 w-5 text-muted-foreground" />
+                          الرئيسية
+                        </Link>
+                        {navLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-secondary transition-colors"
+                          >
+                            <span>{link.label}</span>
+                            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                          </Link>
+                        ))}
+                      </div>
+
+                      {user && (
+                        <>
+                          <div className="h-px bg-border my-3" />
+                          <div className="space-y-1">
+                            <Link
+                              to="/wallet"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors"
+                            >
+                              <Wallet className="h-5 w-5 text-muted-foreground" />
+                              المحفظة
+                            </Link>
+                            <Link
+                              to="/orders"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors"
+                            >
+                              <Package className="h-5 w-5 text-muted-foreground" />
+                              طلباتي
+                            </Link>
+                            <Link
+                              to="/profile"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors"
+                            >
+                              <User className="h-5 w-5 text-muted-foreground" />
+                              حسابي
+                            </Link>
+                            {isAdmin && (
+                              <Link
+                                to="/admin"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors text-primary"
+                              >
+                                <Settings className="h-5 w-5" />
+                                لوحة التحكم
+                              </Link>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </nav>
+
+                    {/* Footer Actions */}
+                    <div className="p-4 border-t border-border space-y-3">
+                      {/* Settings Row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Button variant="outline" size="sm" onClick={toggleCurrency} className="h-9 px-3">
+                            {currency === "JOD" ? "د.أ" : "$"}
+                          </Button>
+                          <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9">
+                            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Auth Buttons */}
+                      {!user ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="outline" className="w-full h-11">
+                              تسجيل الدخول
+                            </Button>
+                          </Link>
+                          <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                            <Button className="w-full h-11">إنشاء حساب</Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full h-11 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={handleLogout}
+                        >
+                          <LogOut className="h-4 w-4 ml-2" />
+                          تسجيل الخروج
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
+
+          {/* Mobile Search Bar (expandable) */}
+          {searchOpen && (
+            <div className="lg:hidden pb-3">
+              <form onSubmit={handleSearch} className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="ابحث عن منتج..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-11 pr-10 pl-10 rounded-lg border border-input bg-secondary/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setSearchOpen(false)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </header>
