@@ -420,17 +420,34 @@ const ProductsManagement = () => {
             <DialogTitle className="text-base">إضافة أكواد</DialogTitle>
             <DialogDescription className="text-sm">{codesDialog?.name}</DialogDescription>
           </DialogHeader>
+          
+          {/* File Upload */}
+          <div className="space-y-2">
+            <Label htmlFor="csv-upload" className="text-sm">رفع ملف CSV</Label>
+            <Input
+              id="csv-upload"
+              type="file"
+              accept=".csv,.txt"
+              onChange={handleFileUpload}
+              className="cursor-pointer h-10"
+            />
+            <p className="text-xs text-muted-foreground">أو أدخل الأكواد يدوياً أدناه</p>
+          </div>
+          
           <Textarea
             value={newCodes}
             onChange={(e) => setNewCodes(e.target.value)}
-            placeholder="كود واحد في كل سطر..."
+            placeholder="كود واحد في كل سطر أو مفصولة بفواصل..."
             className="min-h-[150px] font-mono text-sm"
             dir="ltr"
           />
+          <p className="text-xs text-muted-foreground">
+            يمكنك إدخال كود في كل سطر، أو أكواد مفصولة بفواصل
+          </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setCodesDialog(null)} className="h-10">إلغاء</Button>
-            <Button onClick={handleAddCodes} disabled={addingCodes} className="h-10">
-              {addingCodes ? "جاري..." : "إضافة"}
+            <Button onClick={handleAddCodes} disabled={addingCodes || !newCodes.trim()} className="h-10">
+              {addingCodes ? "جاري الرفع..." : "إضافة الأكواد"}
             </Button>
           </DialogFooter>
         </DialogContent>
