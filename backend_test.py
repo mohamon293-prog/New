@@ -104,8 +104,8 @@ class GameloAPITester:
     def test_user_login(self):
         """Test user login with admin credentials"""
         login_data = {
-            "email": "admin@gamelo.com",
-            "password": "Admin123!"
+            "email": "newadmin@test.com",
+            "password": "Test123!"
         }
         
         success, response = self.make_request('POST', '/auth/login', login_data, expected_status=200)
