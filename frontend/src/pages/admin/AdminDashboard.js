@@ -844,6 +844,283 @@ const TicketsManagement = () => {
   );
 };
 
+// Categories Management
+const CategoriesManagement = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [editCategory, setEditCategory] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "", name_en: "", slug: "", image_url: "", description: "", order: 0
+  });
+
+  useEffect(() => { fetchCategories(); }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/categories`, { headers: getAuthHeader() });
+      setCategories(response.data);
+    } catch (error) {
+      toast.error("فشل في تحميل الأقسام");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editCategory) {
+        await axios.put(`${API_URL}/admin/categories/${editCategory.id}`, formData, { headers: getAuthHeader() });
+        toast.success("تم تحديث القسم");
+      } else {
+        await axios.post(`${API_URL}/admin/categories`, formData, { headers: getAuthHeader() });
+        toast.success("تم إنشاء القسم");
+      }
+      setShowDialog(false);
+      setEditCategory(null);
+      setFormData({ name: "", name_en: "", slug: "", image_url: "", description: "", order: 0 });
+      fetchCategories();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "حدث خطأ");
+    }
+  };
+
+  const openEdit = (cat) => {
+    setEditCategory(cat);
+    setFormData({
+      name: cat.name, name_en: cat.name_en, slug: cat.slug,
+      image_url: cat.image_url || "", description: cat.description || "", order: cat.order
+    });
+    setShowDialog(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("هل تريد حذف هذا القسم؟")) return;
+    try {
+      await axios.delete(`${API_URL}/admin/categories/${id}`, { headers: getAuthHeader() });
+      toast.success("تم حذف القسم");
+      fetchCategories();
+    } catch (error) {
+      toast.error("فشل في حذف القسم");
+    }
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-xl md:text-2xl font-bold">إدارة الأقسام</h2>
+        <Button onClick={() => { setEditCategory(null); setFormData({ name: "", name_en: "", slug: "", image_url: "", description: "", order: 0 }); setShowDialog(true); }} className="h-10 gap-2">
+          <Plus className="h-4 w-4" /> إضافة قسم
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+      ) : (
+        <div className="space-y-2">
+          {categories.map((cat) => (
+            <div key={cat.id} className="p-3 md:p-4 rounded-xl bg-card border border-border flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {cat.image_url && <img src={cat.image_url} alt={cat.name} className="w-12 h-12 rounded-lg object-cover" />}
+                <div>
+                  <h3 className="font-bold text-sm">{cat.name}</h3>
+                  <p className="text-xs text-muted-foreground">{cat.name_en} • {cat.slug}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEdit(cat)}><Edit className="h-4 w-4" /></Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(cat.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editCategory ? "تعديل القسم" : "إضافة قسم جديد"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>الاسم بالعربي</Label>
+                <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
+              </div>
+              <div>
+                <Label>الاسم بالإنجليزي</Label>
+                <Input value={formData.name_en} onChange={(e) => setFormData({...formData, name_en: e.target.value})} required dir="ltr" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>الرابط المختصر (slug)</Label>
+                <Input value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} required dir="ltr" placeholder="playstation" />
+              </div>
+              <div>
+                <Label>الترتيب</Label>
+                <Input type="number" value={formData.order} onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})} />
+              </div>
+            </div>
+            <div>
+              <Label>رابط الصورة</Label>
+              <Input value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} dir="ltr" placeholder="https://..." />
+            </div>
+            <div>
+              <Label>الوصف</Label>
+              <Textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
+              <Button type="submit">{editCategory ? "تحديث" : "إنشاء"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Site Settings
+const SiteSettings = () => {
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchSettings(); }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/settings`, { headers: getAuthHeader() });
+      setSettings(response.data);
+    } catch (error) {
+      toast.error("فشل في تحميل الإعدادات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`${API_URL}/admin/settings`, settings, { headers: getAuthHeader() });
+      toast.success("تم حفظ الإعدادات");
+    } catch (error) {
+      toast.error("فشل في حفظ الإعدادات");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="space-y-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>;
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-xl md:text-2xl font-bold">إعدادات الموقع</h2>
+        <Button onClick={handleSave} disabled={saving} className="gap-2">
+          {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
+        </Button>
+      </div>
+
+      {/* Basic Info */}
+      <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+        <h3 className="font-bold text-lg border-b border-border pb-2">المعلومات الأساسية</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>اسم الموقع (عربي)</Label>
+            <Input value={settings?.site_name || ""} onChange={(e) => setSettings({...settings, site_name: e.target.value})} />
+          </div>
+          <div>
+            <Label>اسم الموقع (إنجليزي)</Label>
+            <Input value={settings?.site_name_en || ""} onChange={(e) => setSettings({...settings, site_name_en: e.target.value})} dir="ltr" />
+          </div>
+        </div>
+        <div>
+          <Label>الشعار / الوصف المختصر</Label>
+          <Input value={settings?.tagline || ""} onChange={(e) => setSettings({...settings, tagline: e.target.value})} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>رقم واتساب</Label>
+            <Input value={settings?.whatsapp_number || ""} onChange={(e) => setSettings({...settings, whatsapp_number: e.target.value})} dir="ltr" placeholder="+962..." />
+          </div>
+          <div>
+            <Label>البريد الإلكتروني</Label>
+            <Input value={settings?.email || ""} onChange={(e) => setSettings({...settings, email: e.target.value})} dir="ltr" />
+          </div>
+        </div>
+      </div>
+
+      {/* Hero Section */}
+      <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+        <h3 className="font-bold text-lg border-b border-border pb-2">القسم الرئيسي (Hero)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>العنوان الرئيسي</Label>
+            <Input value={settings?.hero_title || ""} onChange={(e) => setSettings({...settings, hero_title: e.target.value})} />
+          </div>
+          <div>
+            <Label>العنوان الفرعي</Label>
+            <Input value={settings?.hero_subtitle || ""} onChange={(e) => setSettings({...settings, hero_subtitle: e.target.value})} />
+          </div>
+        </div>
+        <div>
+          <Label>الوصف</Label>
+          <Textarea value={settings?.hero_description || ""} onChange={(e) => setSettings({...settings, hero_description: e.target.value})} rows={3} />
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+        <h3 className="font-bold text-lg border-b border-border pb-2">الإحصائيات</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <Label>العملاء</Label>
+            <Input value={settings?.stats?.customers || ""} onChange={(e) => setSettings({...settings, stats: {...settings?.stats, customers: e.target.value}})} dir="ltr" />
+          </div>
+          <div>
+            <Label>الطلبات</Label>
+            <Input value={settings?.stats?.orders || ""} onChange={(e) => setSettings({...settings, stats: {...settings?.stats, orders: e.target.value}})} dir="ltr" />
+          </div>
+          <div>
+            <Label>نسبة الرضا</Label>
+            <Input value={settings?.stats?.satisfaction || ""} onChange={(e) => setSettings({...settings, stats: {...settings?.stats, satisfaction: e.target.value}})} dir="ltr" />
+          </div>
+          <div>
+            <Label>الدعم</Label>
+            <Input value={settings?.stats?.support || ""} onChange={(e) => setSettings({...settings, stats: {...settings?.stats, support: e.target.value}})} dir="ltr" />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+        <h3 className="font-bold text-lg border-b border-border pb-2">الفوتر</h3>
+        <div>
+          <Label>نص الفوتر</Label>
+          <Textarea value={settings?.footer_text || ""} onChange={(e) => setSettings({...settings, footer_text: e.target.value})} rows={2} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label>Instagram</Label>
+            <Input value={settings?.social_links?.instagram || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, instagram: e.target.value}})} dir="ltr" />
+          </div>
+          <div>
+            <Label>Twitter</Label>
+            <Input value={settings?.social_links?.twitter || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, twitter: e.target.value}})} dir="ltr" />
+          </div>
+          <div>
+            <Label>Facebook</Label>
+            <Input value={settings?.social_links?.facebook || ""} onChange={(e) => setSettings({...settings, social_links: {...settings?.social_links, facebook: e.target.value}})} dir="ltr" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main Dashboard Component
 export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
