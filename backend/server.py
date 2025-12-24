@@ -1500,10 +1500,44 @@ async def broadcast_notification(
 
 # ==================== ADMIN CATEGORIES ====================
 
+@api_router.get("/admin/categories")
+async def get_admin_categories(admin: dict = Depends(get_admin_user)):
+    """Get all categories for admin"""
+    categories = await db.categories.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    return categories
+
+@api_router.post("/admin/categories")
+async def create_admin_category(category: CategoryCreate, admin: dict = Depends(get_admin_user)):
+    """Create a new category"""
+    # Check if slug exists
+    existing = await db.categories.find_one({"slug": category.slug})
+    if existing:
+        raise HTTPException(status_code=400, detail="الرابط المختصر موجود مسبقاً")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    category_id = str(uuid.uuid4())
+    
+    cat_doc = {
+        "id": category_id,
+        "name": category.name,
+        "name_en": category.name_en,
+        "slug": category.slug,
+        "image_url": category.image_url or "",
+        "description": category.description or "",
+        "order": category.order,
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.categories.insert_one(cat_doc)
+    
+    return {"message": "تم إنشاء الفئة بنجاح", "id": category_id}
+
 @api_router.put("/admin/categories/{category_id}")
 async def update_category(category_id: str, updates: Dict[str, Any], admin: dict = Depends(get_admin_user)):
     """Update category"""
-    allowed = {"name", "name_en", "description", "image_url", "order", "is_active"}
+    allowed = {"name", "name_en", "description", "image_url", "order", "is_active", "slug"}
     filtered = {k: v for k, v in updates.items() if k in allowed}
     
     if not filtered:
@@ -1517,6 +1551,148 @@ async def update_category(category_id: str, updates: Dict[str, Any], admin: dict
         raise HTTPException(status_code=404, detail="الفئة غير موجودة")
     
     return {"message": "تم تحديث الفئة"}
+
+@api_router.delete("/admin/categories/{category_id}")
+async def delete_category(category_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete category (soft delete)"""
+    result = await db.categories.update_one(
+        {"id": category_id},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="الفئة غير موجودة")
+    
+    return {"message": "تم حذف الفئة"}
+
+# ==================== ADMIN PRODUCTS CREATE ====================
+
+@api_router.post("/admin/products")
+async def create_admin_product(product: ProductCreate, admin: dict = Depends(get_admin_user)):
+    """Create a new product"""
+    # Check if slug exists
+    existing = await db.products.find_one({"slug": product.slug})
+    if existing:
+        raise HTTPException(status_code=400, detail="الرابط المختصر موجود مسبقاً")
+    
+    # Verify category exists
+    category = await db.categories.find_one({"id": product.category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=400, detail="الفئة غير موجودة")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    product_id = str(uuid.uuid4())
+    
+    prod_doc = {
+        "id": product_id,
+        "name": product.name,
+        "name_en": product.name_en,
+        "slug": product.slug,
+        "description": product.description,
+        "description_en": product.description_en or "",
+        "category_id": product.category_id,
+        "price_jod": product.price_jod,
+        "price_usd": product.price_usd,
+        "original_price_jod": product.original_price_jod,
+        "original_price_usd": product.original_price_usd,
+        "image_url": product.image_url,
+        "platform": product.platform,
+        "region": product.region,
+        "is_featured": product.is_featured,
+        "is_active": True,
+        "rating": 5.0,
+        "review_count": 0,
+        "sold_count": 0,
+        "stock_count": 0,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.products.insert_one(prod_doc)
+    
+    return {"message": "تم إنشاء المنتج بنجاح", "id": product_id}
+
+# ==================== SITE SETTINGS ====================
+
+@api_router.get("/admin/settings")
+async def get_site_settings(admin: dict = Depends(get_admin_user)):
+    """Get site settings"""
+    settings = await db.site_settings.find_one({"type": "general"}, {"_id": 0})
+    
+    if not settings:
+        # Return default settings
+        settings = {
+            "type": "general",
+            "site_name": "قيملو",
+            "site_name_en": "Gamelo",
+            "tagline": "أكواد ألعاب رقمية بأفضل الأسعار",
+            "tagline_en": "Digital Game Codes at Best Prices",
+            "description": "متجرك الموثوق لبطاقات PlayStation، Xbox، Steam، Nintendo وأكثر. آلاف العملاء السعداء في الأردن والشرق الأوسط.",
+            "whatsapp_number": "+962791234567",
+            "email": "support@gamelo.org",
+            "hero_title": "أكواد ألعاب رقمية",
+            "hero_subtitle": "بأفضل الأسعار",
+            "hero_description": "متجرك الموثوق لبطاقات PlayStation، Xbox، Steam، Nintendo وأكثر. آلاف العملاء السعداء في الأردن والشرق الأوسط.",
+            "stats": {
+                "customers": "50,000+",
+                "orders": "100,000+",
+                "satisfaction": "99.9%",
+                "support": "24/7"
+            },
+            "features": [
+                {"icon": "shield", "title": "آمن 100%", "description": "جميع المعاملات مشفرة ومحمية"},
+                {"icon": "zap", "title": "توصيل فوري", "description": "احصل على الكود فوراً"}
+            ],
+            "footer_text": "متجرك الموثوق لأكواد الألعاب الرقمية في الأردن والشرق الأوسط. توصيل فوري، أسعار تنافسية، ودعم 24/7.",
+            "social_links": {
+                "instagram": "",
+                "twitter": "",
+                "facebook": ""
+            }
+        }
+    
+    return settings
+
+@api_router.put("/admin/settings")
+async def update_site_settings(settings: Dict[str, Any], admin: dict = Depends(get_admin_user)):
+    """Update site settings"""
+    settings["type"] = "general"
+    settings["updated_at"] = datetime.now(timezone.utc).isoformat()
+    settings["updated_by"] = admin["id"]
+    
+    await db.site_settings.update_one(
+        {"type": "general"},
+        {"$set": settings},
+        upsert=True
+    )
+    
+    return {"message": "تم تحديث الإعدادات بنجاح"}
+
+@api_router.get("/settings/public")
+async def get_public_settings():
+    """Get public site settings (no auth required)"""
+    settings = await db.site_settings.find_one({"type": "general"}, {"_id": 0})
+    
+    if not settings:
+        settings = {
+            "site_name": "قيملو",
+            "site_name_en": "Gamelo",
+            "tagline": "أكواد ألعاب رقمية بأفضل الأسعار",
+            "description": "متجرك الموثوق لبطاقات PlayStation، Xbox، Steam، Nintendo وأكثر.",
+            "whatsapp_number": "+962791234567",
+            "hero_title": "أكواد ألعاب رقمية",
+            "hero_subtitle": "بأفضل الأسعار",
+            "hero_description": "متجرك الموثوق لبطاقات PlayStation، Xbox، Steam، Nintendo وأكثر. آلاف العملاء السعداء في الأردن والشرق الأوسط.",
+            "stats": {
+                "customers": "50,000+",
+                "orders": "100,000+",
+                "satisfaction": "99.9%",
+                "support": "24/7"
+            },
+            "footer_text": "متجرك الموثوق لأكواد الألعاب الرقمية في الأردن والشرق الأوسط."
+        }
+    
+    return settings
 
 # ==================== ADMIN SUPPORT TICKETS ====================
 
