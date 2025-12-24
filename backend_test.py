@@ -372,6 +372,11 @@ class GameloAPITester:
         # Admin tests
         self.test_admin_endpoints()
         
+        # Phase 2 feature tests
+        self.test_discount_codes()
+        self.test_notifications()
+        self.test_support_tickets_admin()
+        
         # Security tests
         self.test_unauthorized_access()
         
