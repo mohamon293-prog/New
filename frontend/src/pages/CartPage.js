@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { formatPrice, API_URL, getAuthHeader } from "../lib/utils";
 import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
 import {
@@ -15,6 +16,9 @@ import {
   CreditCard,
   Shield,
   Zap,
+  Tag,
+  Check,
+  X,
 } from "lucide-react";
 
 export default function CartPage() {
@@ -22,6 +26,44 @@ export default function CartPage() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
+
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    if (!isAuthenticated) {
+      toast.error("يجب تسجيل الدخول لاستخدام كود الخصم");
+      return;
+    }
+
+    setApplyingDiscount(true);
+    try {
+      const response = await axios.post(
+        `${API_URL}/discounts/apply`,
+        {
+          code: discountCode,
+          subtotal: getTotal(),
+          product_ids: items.map(i => i.id)
+        },
+        { headers: getAuthHeader() }
+      );
+      
+      setAppliedDiscount(response.data);
+      toast.success("تم تطبيق كود الخصم!");
+    } catch (error) {
+      const message = error.response?.data?.detail || "كود الخصم غير صالح";
+      toast.error(message);
+      setAppliedDiscount(null);
+    } finally {
+      setApplyingDiscount(false);
+    }
+  };
+
+  const removeDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode("");
+  };
 
   const handleCheckout = async () => {
     if (!isAuthenticated) {
