@@ -437,7 +437,12 @@ const ProductsManagement = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="font-heading text-xl md:text-2xl font-bold">إدارة المنتجات</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-xl md:text-2xl font-bold">إدارة المنتجات</h2>
+        <Button onClick={() => { setEditProduct(null); setProductForm({ name: "", name_en: "", slug: "", description: "", category_id: "", price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "", image_url: "", platform: "", region: "عالمي", is_featured: false }); setShowCreateDialog(true); }} className="h-10 gap-2">
+          <Plus className="h-4 w-4" /> إضافة منتج
+        </Button>
+      </div>
 
       {loading ? (
         <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}</div>
@@ -463,6 +468,10 @@ const ProductsManagement = () => {
                     <span>المخزون: <strong className={product.stock_count > 0 ? "text-green-500" : "text-destructive"}>{product.stock_count}</strong></span>
                   </div>
                   <div className="flex gap-2 mt-3">
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => openEditProduct(product)}>
+                      <Edit className="h-3 w-3 ml-1" />
+                      تعديل
+                    </Button>
                     <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCodesDialog(product)}>
                       <Upload className="h-3 w-3 ml-1" />
                       إضافة أكواد
@@ -477,6 +486,107 @@ const ProductsManagement = () => {
           ))}
         </div>
       )}
+
+      {/* Create/Edit Product Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editProduct ? "تعديل المنتج" : "إضافة منتج جديد"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateProduct} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>الاسم بالعربي *</Label>
+                <Input value={productForm.name} onChange={(e) => setProductForm({...productForm, name: e.target.value})} required />
+              </div>
+              <div>
+                <Label>الاسم بالإنجليزي *</Label>
+                <Input value={productForm.name_en} onChange={(e) => setProductForm({...productForm, name_en: e.target.value})} required dir="ltr" />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>الرابط المختصر (slug) *</Label>
+                <Input value={productForm.slug} onChange={(e) => setProductForm({...productForm, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} required dir="ltr" placeholder="ps-plus-12" />
+              </div>
+              <div>
+                <Label>القسم *</Label>
+                <Select value={productForm.category_id} onValueChange={(v) => setProductForm({...productForm, category_id: v})}>
+                  <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <Label>الوصف *</Label>
+              <Textarea value={productForm.description} onChange={(e) => setProductForm({...productForm, description: e.target.value})} required rows={3} />
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label>السعر (د.أ) *</Label>
+                <Input type="number" step="0.01" value={productForm.price_jod} onChange={(e) => setProductForm({...productForm, price_jod: e.target.value})} required dir="ltr" />
+              </div>
+              <div>
+                <Label>السعر ($) *</Label>
+                <Input type="number" step="0.01" value={productForm.price_usd} onChange={(e) => setProductForm({...productForm, price_usd: e.target.value})} required dir="ltr" />
+              </div>
+              <div>
+                <Label>السعر الأصلي (د.أ)</Label>
+                <Input type="number" step="0.01" value={productForm.original_price_jod} onChange={(e) => setProductForm({...productForm, original_price_jod: e.target.value})} dir="ltr" />
+              </div>
+              <div>
+                <Label>السعر الأصلي ($)</Label>
+                <Input type="number" step="0.01" value={productForm.original_price_usd} onChange={(e) => setProductForm({...productForm, original_price_usd: e.target.value})} dir="ltr" />
+              </div>
+            </div>
+            
+            <div>
+              <Label>رابط الصورة *</Label>
+              <Input value={productForm.image_url} onChange={(e) => setProductForm({...productForm, image_url: e.target.value})} required dir="ltr" placeholder="https://..." />
+              {productForm.image_url && <img src={productForm.image_url} alt="Preview" className="mt-2 w-20 h-20 rounded-lg object-cover" />}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>المنصة *</Label>
+                <Select value={productForm.platform} onValueChange={(v) => setProductForm({...productForm, platform: v})}>
+                  <SelectTrigger><SelectValue placeholder="اختر المنصة" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="playstation">PlayStation</SelectItem>
+                    <SelectItem value="xbox">Xbox</SelectItem>
+                    <SelectItem value="steam">Steam</SelectItem>
+                    <SelectItem value="nintendo">Nintendo</SelectItem>
+                    <SelectItem value="pc">PC</SelectItem>
+                    <SelectItem value="mobile">Mobile</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>المنطقة</Label>
+                <Input value={productForm.region} onChange={(e) => setProductForm({...productForm, region: e.target.value})} placeholder="عالمي" />
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={productForm.is_featured} onChange={(e) => setProductForm({...productForm, is_featured: e.target.checked})} className="rounded" />
+                  <span>منتج مميز</span>
+                </label>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>إلغاء</Button>
+              <Button type="submit">{editProduct ? "تحديث" : "إنشاء المنتج"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!codesDialog} onOpenChange={() => setCodesDialog(null)}>
         <DialogContent className="max-w-md">
