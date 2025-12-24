@@ -314,24 +314,51 @@ const ProductsManagement = () => {
   const handleAddCodes = async () => {
     if (!newCodes.trim() || !codesDialog) return;
     
-    const codes = newCodes.split("\n").map(c => c.trim()).filter(c => c);
-    if (codes.length === 0) {
+    const codesText = newCodes.trim();
+    if (!codesText) {
       toast.error("أدخل الأكواد");
       return;
     }
 
     setAddingCodes(true);
     try {
-      await axios.post(`${API_URL}/admin/codes/bulk`, { product_id: codesDialog.id, codes }, { headers: getAuthHeader() });
-      toast.success(`تم إضافة ${codes.length} كود`);
+      // Use the CSV upload endpoint with text content
+      const response = await axios.post(
+        `${API_URL}/admin/products/${codesDialog.id}/codes/upload`,
+        codesText,
+        { 
+          headers: {
+            ...getAuthHeader(),
+            'Content-Type': 'text/plain'
+          }
+        }
+      );
+      toast.success(`تم إضافة ${response.data.codes_added} كود`);
+      if (response.data.duplicates_skipped > 0) {
+        toast.info(`تم تخطي ${response.data.duplicates_skipped} كود مكرر`);
+      }
       setCodesDialog(null);
       setNewCodes("");
       fetchProducts();
     } catch (error) {
-      toast.error("فشل في إضافة الأكواد");
+      toast.error(error.response?.data?.detail || "فشل في إضافة الأكواد");
     } finally {
       setAddingCodes(false);
     }
+  };
+  
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !codesDialog) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target?.result;
+      if (content) {
+        setNewCodes(content);
+      }
+    };
+    reader.readAsText(file);
   };
 
   const toggleProductStatus = async (productId, currentStatus) => {
