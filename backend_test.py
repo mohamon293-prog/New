@@ -472,6 +472,10 @@ class GameloAPITester:
         self.test_notifications()
         self.test_support_tickets_admin()
         
+        # CSV Upload feature tests
+        self.test_csv_upload_functionality()
+        self.test_product_codes_count_update()
+        
         # Security tests
         self.test_unauthorized_access()
         
