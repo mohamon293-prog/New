@@ -998,11 +998,10 @@ async def get_user_tickets(user: dict = Depends(get_current_user)):
 async def get_all_users(admin: dict = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     
-    # Get wallet balances for all users
+    # Get wallet balances for all users from transactions ledger
     for user in users:
-        wallet = await db.wallets.find_one({"user_id": user["id"]}, {"_id": 0})
-        user["wallet_balance_jod"] = wallet.get("balance_jod", 0) if wallet else 0
-        user["wallet_balance_usd"] = wallet.get("balance_usd", 0) if wallet else 0
+        user["wallet_balance_jod"] = await get_wallet_balance(user["id"], "JOD")
+        user["wallet_balance_usd"] = await get_wallet_balance(user["id"], "USD")
     
     return users
 
