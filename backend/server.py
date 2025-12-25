@@ -997,6 +997,13 @@ async def get_user_tickets(user: dict = Depends(get_current_user)):
 @api_router.get("/admin/users")
 async def get_all_users(admin: dict = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    
+    # Get wallet balances for all users
+    for user in users:
+        wallet = await db.wallets.find_one({"user_id": user["id"]}, {"_id": 0})
+        user["wallet_balance_jod"] = wallet.get("balance_jod", 0) if wallet else 0
+        user["wallet_balance_usd"] = wallet.get("balance_usd", 0) if wallet else 0
+    
     return users
 
 @api_router.patch("/admin/users/{user_id}")
