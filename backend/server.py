@@ -1521,15 +1521,21 @@ async def create_discount_code(discount: DiscountCodeCreate, admin: dict = Depen
     discount_doc = {
         "id": discount_id,
         "code": discount.code.upper(),
+        "name": discount.name or discount.code.upper(),
+        "description": discount.description,
         "discount_type": discount.discount_type,
         "discount_value": discount.discount_value,
         "min_purchase": discount.min_purchase,
+        "max_discount": discount.max_discount,
         "max_uses": discount.max_uses,
+        "max_uses_per_user": discount.max_uses_per_user,
         "used_count": 0,
         "valid_from": discount.valid_from,
         "valid_until": discount.valid_until,
         "applicable_products": discount.applicable_products,
         "applicable_categories": discount.applicable_categories,
+        "first_purchase_only": discount.first_purchase_only,
+        "requires_min_items": discount.requires_min_items,
         "is_active": True,
         "created_by": admin["id"],
         "created_at": now,
@@ -1540,16 +1546,43 @@ async def create_discount_code(discount: DiscountCodeCreate, admin: dict = Depen
     
     return discount_doc
 
-@api_router.get("/admin/discounts", response_model=List[DiscountCodeResponse])
+@api_router.get("/admin/discounts")
 async def get_all_discounts(admin: dict = Depends(get_admin_user)):
-    """Get all discount codes"""
+    """Get all discount codes with usage stats"""
     discounts = await db.discount_codes.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Add default values for new fields
+    for d in discounts:
+        d.setdefault("name", d.get("code", ""))
+        d.setdefault("description", "")
+        d.setdefault("max_discount", None)
+        d.setdefault("max_uses_per_user", 1)
+        d.setdefault("first_purchase_only", False)
+        d.setdefault("requires_min_items", 0)
+    
     return discounts
 
-@api_router.patch("/admin/discounts/{discount_id}")
+@api_router.get("/admin/discounts/{discount_id}")
+async def get_discount_details(discount_id: str, admin: dict = Depends(get_admin_user)):
+    """Get discount code details with usage history"""
+    discount = await db.discount_codes.find_one({"id": discount_id}, {"_id": 0})
+    if not discount:
+        raise HTTPException(status_code=404, detail="كود الخصم غير موجود")
+    
+    # Get usage history
+    usage = await db.discount_usage.find({"discount_id": discount_id}, {"_id": 0}).sort("used_at", -1).limit(50).to_list(50)
+    
+    discount["usage_history"] = usage
+    return discount
+
+@api_router.put("/admin/discounts/{discount_id}")
 async def update_discount(discount_id: str, updates: Dict[str, Any], admin: dict = Depends(get_admin_user)):
     """Update discount code"""
-    allowed = {"is_active", "max_uses", "valid_until", "discount_value", "min_purchase"}
+    allowed = {
+        "is_active", "max_uses", "max_uses_per_user", "valid_until", "valid_from",
+        "discount_value", "min_purchase", "max_discount", "name", "description",
+        "applicable_products", "applicable_categories", "first_purchase_only", "requires_min_items"
+    }
     filtered = {k: v for k, v in updates.items() if k in allowed}
     
     if not filtered:
