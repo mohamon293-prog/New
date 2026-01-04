@@ -76,11 +76,13 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     { icon: Tag, label: "الأقسام", path: "/admin/categories" },
     { icon: FileSpreadsheet, label: "رفع Excel", path: "/admin/import" },
     { icon: ShoppingCart, label: "الطلبات", path: "/admin/orders" },
+    { icon: MessageSquare, label: "النزاعات", path: "/admin/disputes" },
     { icon: Users, label: "المستخدمين", path: "/admin/users" },
     { icon: Wallet, label: "المحافظ", path: "/admin/wallets" },
     { icon: Tag, label: "أكواد الخصم", path: "/admin/discounts" },
     { icon: Bell, label: "الإشعارات", path: "/admin/notifications" },
-    { icon: MessageSquare, label: "الدعم الفني", path: "/admin/tickets" },
+    { icon: Eye, label: "التحليلات", path: "/admin/analytics" },
+    { icon: Eye, label: "سجل النشاطات", path: "/admin/audit" },
     { icon: Settings, label: "إعدادات الموقع", path: "/admin/settings" },
   ];
 
