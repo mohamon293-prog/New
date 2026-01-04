@@ -2763,6 +2763,9 @@ export default function AdminDashboard() {
             <Route path="products" element={<ProductsManagement />} />
             <Route path="categories" element={<CategoriesManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
+            <Route path="disputes" element={<DisputesManagement />} />
+            <Route path="analytics" element={<AnalyticsDashboard />} />
+            <Route path="audit" element={<AuditLogs />} />
             <Route path="wallets" element={<WalletManagement />} />
             <Route path="discounts" element={<DiscountsManagement />} />
             <Route path="notifications" element={<NotificationsManagement />} />
