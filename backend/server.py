@@ -2542,6 +2542,183 @@ async def get_audit_logs(
         "pages": (total + limit - 1) // limit
     }
 
+# ==================== TELEGRAM NOTIFICATIONS ====================
+
+async def send_telegram_notification(message: str, notification_type: str = "info"):
+    """Send notification to Telegram"""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        logger.warning("Telegram not configured - skipping notification")
+        return False
+    
+    try:
+        # Add emoji based on type
+        emoji_map = {
+            "new_order": "🛒",
+            "dispute": "⚠️",
+            "low_stock": "📦",
+            "user_registered": "👤",
+            "payment": "💰",
+            "info": "ℹ️",
+            "alert": "🚨"
+        }
+        emoji = emoji_map.get(notification_type, "📢")
+        
+        full_message = f"{emoji} {message}"
+        
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": full_message,
+                "parse_mode": "HTML"
+            })
+            
+            if response.status_code == 200:
+                logger.info(f"Telegram notification sent: {notification_type}")
+                return True
+            else:
+                logger.error(f"Telegram error: {response.text}")
+                return False
+    except Exception as e:
+        logger.error(f"Failed to send Telegram notification: {e}")
+        return False
+
+async def notify_new_order(order: dict, user: dict):
+    """Send notification for new order"""
+    products = ", ".join([item.get("product_name", "منتج") for item in order.get("items", [])])
+    message = f"""<b>طلب جديد!</b>
+
+<b>رقم الطلب:</b> #{order.get('order_number', order['id'][:8])}
+<b>العميل:</b> {user.get('name', 'غير معروف')}
+<b>المبلغ:</b> {order.get('total_jod', 0):.2f} د.أ
+<b>المنتجات:</b> {products}
+<b>التاريخ:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}"""
+    
+    await send_telegram_notification(message, "new_order")
+
+async def notify_new_dispute(dispute: dict):
+    """Send notification for new dispute"""
+    message = f"""<b>نزاع جديد!</b>
+
+<b>رقم النزاع:</b> #{dispute['id'][:8]}
+<b>العميل:</b> {dispute.get('user_name', 'غير معروف')}
+<b>السبب:</b> {dispute.get('reason', 'غير محدد')}
+<b>الوصف:</b> {dispute.get('description', '')[:100]}...
+<b>رقم الطلب:</b> #{dispute.get('order_id', '')[:8]}"""
+    
+    await send_telegram_notification(message, "dispute")
+
+async def notify_low_stock(product: dict, current_stock: int):
+    """Send notification for low stock"""
+    message = f"""<b>تنبيه: مخزون منخفض!</b>
+
+<b>المنتج:</b> {product.get('name', 'غير معروف')}
+<b>المخزون الحالي:</b> {current_stock} فقط
+<b>SKU:</b> {product.get('slug', 'N/A')}
+
+يرجى إعادة تعبئة المخزون."""
+    
+    await send_telegram_notification(message, "low_stock")
+
+# Telegram Settings Endpoints
+class TelegramSettings(BaseModel):
+    bot_token: str
+    chat_id: str
+    notify_new_orders: bool = True
+    notify_disputes: bool = True
+    notify_low_stock: bool = True
+    low_stock_threshold: int = 5
+
+@api_router.get("/admin/telegram/settings")
+async def get_telegram_settings(admin: dict = Depends(get_admin_user)):
+    """Get Telegram notification settings"""
+    settings = await db.site_settings.find_one({"type": "telegram"}, {"_id": 0})
+    
+    if not settings:
+        return {
+            "bot_token": TELEGRAM_BOT_TOKEN[:10] + "..." if TELEGRAM_BOT_TOKEN else "",
+            "chat_id": TELEGRAM_CHAT_ID,
+            "notify_new_orders": True,
+            "notify_disputes": True,
+            "notify_low_stock": True,
+            "low_stock_threshold": 5,
+            "is_configured": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
+        }
+    
+    # Hide full token for security
+    if settings.get("bot_token"):
+        settings["bot_token"] = settings["bot_token"][:10] + "..."
+    settings["is_configured"] = bool(settings.get("bot_token") and settings.get("chat_id"))
+    
+    return settings
+
+@api_router.put("/admin/telegram/settings")
+async def update_telegram_settings(settings: TelegramSettings, admin: dict = Depends(get_admin_user)):
+    """Update Telegram notification settings"""
+    global TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Update in database
+    await db.site_settings.update_one(
+        {"type": "telegram"},
+        {"$set": {
+            "type": "telegram",
+            "bot_token": settings.bot_token,
+            "chat_id": settings.chat_id,
+            "notify_new_orders": settings.notify_new_orders,
+            "notify_disputes": settings.notify_disputes,
+            "notify_low_stock": settings.notify_low_stock,
+            "low_stock_threshold": settings.low_stock_threshold,
+            "updated_at": now,
+            "updated_by": admin["id"]
+        }},
+        upsert=True
+    )
+    
+    # Update runtime variables
+    TELEGRAM_BOT_TOKEN = settings.bot_token
+    TELEGRAM_CHAT_ID = settings.chat_id
+    
+    return {"message": "تم حفظ إعدادات Telegram"}
+
+@api_router.post("/admin/telegram/test")
+async def test_telegram_notification(admin: dict = Depends(get_admin_user)):
+    """Send a test notification to Telegram"""
+    # Load settings from DB
+    settings = await db.site_settings.find_one({"type": "telegram"}, {"_id": 0})
+    
+    token = settings.get("bot_token") if settings else TELEGRAM_BOT_TOKEN
+    chat_id = settings.get("chat_id") if settings else TELEGRAM_CHAT_ID
+    
+    if not token or not chat_id:
+        raise HTTPException(status_code=400, detail="لم يتم تكوين Telegram. يرجى إدخال Bot Token و Chat ID")
+    
+    try:
+        message = f"""✅ <b>اختبار إشعارات Gamelo</b>
+
+تم إرسال هذه الرسالة بنجاح!
+<b>المرسل:</b> {admin.get('name', 'Admin')}
+<b>الوقت:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+إعدادات الإشعارات تعمل بشكل صحيح."""
+
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json={
+                "chat_id": chat_id,
+                "text": message,
+                "parse_mode": "HTML"
+            })
+            
+            if response.status_code == 200:
+                return {"message": "تم إرسال رسالة الاختبار بنجاح", "success": True}
+            else:
+                error_data = response.json()
+                raise HTTPException(status_code=400, detail=f"فشل في إرسال الرسالة: {error_data.get('description', 'خطأ غير معروف')}")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"خطأ في الاتصال: {str(e)}")
+
 # ==================== ANALYTICS DASHBOARD ====================
 
 @api_router.get("/admin/analytics/overview")
