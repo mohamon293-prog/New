@@ -680,14 +680,14 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database indexes on startup"""
-    await db.users.create_index("email", unique=True)
-    await db.users.create_index("id", unique=True)
-    await db.products.create_index("id", unique=True)
-    await db.products.create_index("slug")
-    await db.categories.create_index("id", unique=True)
-    await db.categories.create_index("slug")
-    await db.orders.create_index("id", unique=True)
-    await db.orders.create_index("user_id")
-    await db.codes.create_index("product_id")
-    await db.codes.create_index([("product_id", 1), ("is_sold", 1)])
-    logger.info("Database indexes created")
+    try:
+        await db.users.create_index("email", unique=True)
+        await db.users.create_index("id", unique=True)
+        await db.products.create_index("id", unique=True)
+        await db.categories.create_index("id", unique=True)
+        await db.orders.create_index("id", unique=True)
+        await db.orders.create_index("user_id")
+        await db.codes.create_index("product_id")
+        logger.info("Database indexes created")
+    except Exception as e:
+        logger.warning(f"Index creation warning: {e}")
