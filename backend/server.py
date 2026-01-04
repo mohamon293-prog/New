@@ -1876,6 +1876,235 @@ async def get_platforms():
         {"id": "giftcards", "name": "بطاقات الهدايا", "name_en": "Gift Cards", "icon": "gift"}
     ]
 
+# ==================== FILE UPLOAD ENDPOINTS ====================
+
+@api_router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    folder: str = Form("images"),
+    admin: dict = Depends(get_admin_user)
+):
+    """Upload an image file"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="نوع الملف غير مدعوم. يرجى رفع صورة (JPEG, PNG, WebP, GIF)")
+    
+    # Validate file size (max 5MB)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="حجم الملف كبير جداً. الحد الأقصى 5MB")
+    
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{uuid.uuid4()}.{ext}"
+    
+    # Save file
+    folder_path = UPLOAD_DIR / folder
+    folder_path.mkdir(exist_ok=True)
+    file_path = folder_path / filename
+    
+    async with aiofiles.open(file_path, "wb") as f:
+        await f.write(contents)
+    
+    # Return the URL
+    return {
+        "url": f"/uploads/{folder}/{filename}",
+        "filename": filename,
+        "size": len(contents),
+        "content_type": file.content_type
+    }
+
+@api_router.delete("/upload/image")
+async def delete_image(
+    url: str = Body(..., embed=True),
+    admin: dict = Depends(get_admin_user)
+):
+    """Delete an uploaded image"""
+    if not url.startswith("/uploads/"):
+        raise HTTPException(status_code=400, detail="رابط غير صالح")
+    
+    file_path = ROOT_DIR / url.lstrip("/")
+    if file_path.exists():
+        file_path.unlink()
+        return {"message": "تم حذف الصورة"}
+    else:
+        raise HTTPException(status_code=404, detail="الصورة غير موجودة")
+
+# ==================== BANNER/SLIDER ENDPOINTS ====================
+
+@api_router.get("/banners")
+async def get_active_banners(position: Optional[str] = None):
+    """Get active banners for public display"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    query = {"is_active": True}
+    if position:
+        query["position"] = position
+    
+    banners = await db.banners.find(query, {"_id": 0}).sort("priority", -1).to_list(50)
+    
+    # Filter by date
+    active_banners = []
+    for banner in banners:
+        starts_at = banner.get("starts_at")
+        ends_at = banner.get("ends_at")
+        
+        if starts_at and starts_at > now:
+            continue
+        if ends_at and ends_at < now:
+            continue
+        
+        active_banners.append(banner)
+    
+    return active_banners
+
+@api_router.post("/banners/{banner_id}/click")
+async def track_banner_click(banner_id: str):
+    """Track banner click"""
+    await db.banners.update_one({"id": banner_id}, {"$inc": {"clicks": 1}})
+    return {"message": "ok"}
+
+@api_router.get("/admin/banners")
+async def get_all_banners(admin: dict = Depends(get_admin_user)):
+    """Get all banners for admin"""
+    banners = await db.banners.find({}, {"_id": 0}).sort([("position", 1), ("priority", -1)]).to_list(100)
+    return banners
+
+@api_router.post("/admin/banners")
+async def create_banner(banner: BannerCreate, admin: dict = Depends(get_admin_user)):
+    """Create a new banner"""
+    now = datetime.now(timezone.utc).isoformat()
+    banner_id = str(uuid.uuid4())
+    
+    banner_doc = {
+        "id": banner_id,
+        **banner.model_dump(),
+        "clicks": 0,
+        "views": 0,
+        "created_at": now,
+        "created_by": admin["id"]
+    }
+    
+    await db.banners.insert_one(banner_doc)
+    return {"message": "تم إنشاء البانر بنجاح", "id": banner_id}
+
+@api_router.put("/admin/banners/{banner_id}")
+async def update_banner(banner_id: str, updates: Dict[str, Any], admin: dict = Depends(get_admin_user)):
+    """Update a banner"""
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    updates["updated_by"] = admin["id"]
+    
+    result = await db.banners.update_one({"id": banner_id}, {"$set": updates})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="البانر غير موجود")
+    
+    return {"message": "تم تحديث البانر"}
+
+@api_router.delete("/admin/banners/{banner_id}")
+async def delete_banner(banner_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a banner"""
+    banner = await db.banners.find_one({"id": banner_id})
+    if not banner:
+        raise HTTPException(status_code=404, detail="البانر غير موجود")
+    
+    # Delete associated image if it's an uploaded file
+    if banner.get("image_url", "").startswith("/uploads/"):
+        file_path = ROOT_DIR / banner["image_url"].lstrip("/")
+        if file_path.exists():
+            file_path.unlink()
+    
+    await db.banners.delete_one({"id": banner_id})
+    return {"message": "تم حذف البانر"}
+
+# ==================== HOMEPAGE SECTIONS ENDPOINTS ====================
+
+@api_router.get("/homepage/sections")
+async def get_homepage_sections():
+    """Get active homepage sections with products"""
+    sections = await db.homepage_sections.find({"is_active": True}, {"_id": 0}).sort("order", 1).to_list(20)
+    
+    result = []
+    for section in sections:
+        section_data = {**section, "products": []}
+        
+        if section["section_type"] == "new_products":
+            products = await db.products.find(
+                {"is_active": True}, {"_id": 0}
+            ).sort("created_at", -1).limit(section.get("max_items", 8)).to_list(section.get("max_items", 8))
+            
+        elif section["section_type"] == "best_sellers":
+            products = await db.products.find(
+                {"is_active": True}, {"_id": 0}
+            ).sort("sold_count", -1).limit(section.get("max_items", 8)).to_list(section.get("max_items", 8))
+            
+        elif section["section_type"] == "featured":
+            products = await db.products.find(
+                {"is_active": True, "is_featured": True}, {"_id": 0}
+            ).sort("created_at", -1).limit(section.get("max_items", 8)).to_list(section.get("max_items", 8))
+            
+        elif section["section_type"] == "custom" and section.get("product_ids"):
+            products = await db.products.find(
+                {"is_active": True, "id": {"$in": section["product_ids"]}}, {"_id": 0}
+            ).to_list(len(section["product_ids"]))
+        else:
+            products = []
+        
+        # Add stock count from codes
+        for product in products:
+            if product.get("product_type", "digital_code") == "digital_code":
+                stock = await db.product_codes.count_documents({"product_id": product["id"], "status": "unused"})
+                product["stock_count"] = stock
+        
+        section_data["products"] = products
+        result.append(section_data)
+    
+    return result
+
+@api_router.get("/admin/homepage/sections")
+async def get_all_homepage_sections(admin: dict = Depends(get_admin_user)):
+    """Get all homepage sections for admin"""
+    sections = await db.homepage_sections.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+    return sections
+
+@api_router.post("/admin/homepage/sections")
+async def create_homepage_section(section: HomepageSectionCreate, admin: dict = Depends(get_admin_user)):
+    """Create a new homepage section"""
+    section_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    section_doc = {
+        "id": section_id,
+        **section.model_dump(),
+        "created_at": now
+    }
+    
+    await db.homepage_sections.insert_one(section_doc)
+    return {"message": "تم إنشاء القسم", "id": section_id}
+
+@api_router.put("/admin/homepage/sections/{section_id}")
+async def update_homepage_section(section_id: str, updates: Dict[str, Any], admin: dict = Depends(get_admin_user)):
+    """Update a homepage section"""
+    result = await db.homepage_sections.update_one({"id": section_id}, {"$set": updates})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="القسم غير موجود")
+    return {"message": "تم تحديث القسم"}
+
+@api_router.delete("/admin/homepage/sections/{section_id}")
+async def delete_homepage_section(section_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a homepage section"""
+    result = await db.homepage_sections.delete_one({"id": section_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="القسم غير موجود")
+    return {"message": "تم حذف القسم"}
+
+@api_router.put("/admin/homepage/sections/reorder")
+async def reorder_homepage_sections(order: List[str] = Body(...), admin: dict = Depends(get_admin_user)):
+    """Reorder homepage sections"""
+    for i, section_id in enumerate(order):
+        await db.homepage_sections.update_one({"id": section_id}, {"$set": {"order": i}})
+    return {"message": "تم إعادة الترتيب"}
+
 @api_router.get("/")
 async def root():
     return {"message": "مرحباً بك في Gamelo API", "version": "1.0.0"}
