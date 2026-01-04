@@ -857,6 +857,17 @@ async def create_order(order_data: OrderCreate, request: Request, user: dict = D
         "created_at": now
     })
     
+    # Send Telegram notification for new order
+    telegram_settings = await db.site_settings.find_one({"type": "telegram"})
+    if telegram_settings and telegram_settings.get("notify_new_orders", True):
+        order_doc = {
+            "id": order_id,
+            "order_number": order_id[:8],
+            "items": [{"product_name": product["name"]}],
+            "total_jod": total_jod
+        }
+        await notify_new_order(order_doc, user)
+    
     return OrderResponse(
         id=order_id,
         user_id=user_id,
