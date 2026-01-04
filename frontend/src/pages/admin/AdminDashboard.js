@@ -1032,12 +1032,12 @@ const OrdersManagement = () => {
           </div>
           <Button type="submit" variant="secondary">بحث</Button>
         </form>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === "all" ? "" : v); setPage(1); }}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="كل الحالات" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">كل الحالات</SelectItem>
+            <SelectItem value="all">كل الحالات</SelectItem>
             {Object.entries(ORDER_STATUSES).map(([key, val]) => (
               <SelectItem key={key} value={key}>{val.label}</SelectItem>
             ))}
