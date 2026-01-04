@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -53,6 +53,13 @@ import {
   Send,
   ChevronLeft,
   Home,
+  Image,
+  LayoutGrid,
+  Settings,
+  GripVertical,
+  Calendar,
+  Link as LinkIcon,
+  FileSpreadsheet,
 } from "lucide-react";
 
 // Admin Sidebar
