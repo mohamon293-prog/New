@@ -3666,6 +3666,7 @@ export default function AdminDashboard() {
             <Route path="tickets" element={<TicketsManagement />} />
             <Route path="telegram" element={<TelegramSettings />} />
             <Route path="roles" element={<RolesManagement />} />
+            <Route path="cms" element={<CMSManagement />} />
             <Route path="settings" element={<SiteSettings />} />
           </Routes>
         </div>
