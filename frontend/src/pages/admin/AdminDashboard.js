@@ -3181,6 +3181,7 @@ export default function AdminDashboard() {
             <Route path="discounts" element={<DiscountsManagement />} />
             <Route path="notifications" element={<NotificationsManagement />} />
             <Route path="tickets" element={<TicketsManagement />} />
+            <Route path="telegram" element={<TelegramSettings />} />
             <Route path="settings" element={<SiteSettings />} />
           </Routes>
         </div>
