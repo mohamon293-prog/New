@@ -5,7 +5,6 @@
 *   **Platform Scope:** Unify e-commerce, support, content management (CMS), analytics, and automation into a single system.
 *   **Key Features:**
     *   **Content & Site Structure:** Dynamic homepage (new products, bestsellers), mega-menu, breadcrumbs, and a full CMS for pages like About Us, Terms, etc.
-    *   **Commercial Engine:** A powerful slider/banner/ads engine with scheduling.
     *   **Advanced Products:** Support for three product types (Digital Code, Existing Account, New Account), product variants (e.g., 1/3/12 months), and multiple creation methods (Manual Form, Excel Upload).
     *   **Order & User Management:** Full order lifecycle tracking (Pending, Failed, Completed, etc.), user profiles with purchase history and online status.
     *   **Business Operations:** A built-in dispute/refund system, user wallet system with transaction history, advanced coupon and pricing rules, and an immutable audit log for all actions.
@@ -15,179 +14,157 @@
 *   **Starter Content:** A seed catalog of ~100 digital products (PlayStation, Steam, Adobe, etc.) must be included and fully manageable.
 *   **Architecture:** Must be modular, scalable, API-first, and secure.
 
-**User's preferred language**: Arabic (العربية). All communication with the user MUST be in Arabic.
+**User's preferred language**: Arabic (العربية)
 
 **what currently exists?**
-The application is a functional full-stack marketplace built with a FastAPI/MongoDB backend and a React frontend. The UI is dark-themed and fully RTL/Arabic.
+The application is a full-stack marketplace with a React frontend and a FastAPI/MongoDB backend. The UI is a dark theme, fully in Arabic, and right-to-left (RTL).
 
-**Key existing features:**
-*   **User Auth:** JWT-based registration and login.
-*   **Basic E-commerce:** Product/category display, cart, and wallet-based checkout.
-*   **Advanced Admin Dashboard:**
-    *   CRUD for Products, Categories, Discounts, and Notifications.
-    *   **CSV Code Upload:** Admins can upload product codes via CSV files.
-    *   **Site Settings:** A UI to manage site name, description, contact info, and, critically, **logos and promotional images/banners**.
-    *   **Wallet Management:** A user-friendly UI to search for users and credit their wallets.
-    *   **Dynamic Content:** UI for managing homepage banners/sliders and homepage sections (e.g., New Products).
-    *   **Product Import:** A UI for bulk-importing products via an Excel file.
-    *   **Advanced Product Form:** A multi-tabbed interface for creating/editing products, supporting different product types (Code, Account) and variants (e.g., 1-month, 3-month subscription).
-*   **Content:** The database is seeded with ~55 products and default homepage sections.
-*   **File Storage:** A basic file upload system is in place, storing images in .
+Major progress has been made:
+*   The monolithic backend () has been successfully refactored into a modular structure with separate files for routes, models, and utilities.
+*   The frontend  monolith is currently undergoing a similar refactoring, with some components already extracted.
+*   Implemented features include: full product/category/user management, advanced orders, disputes, audit logs, an enhanced coupon system, a complete Role-Based Access Control (RBAC) system, Telegram notifications for admins, and a Content Management System (CMS) for static pages and FAQs.
 
 **Last working item**:
-*   **Last item agent was working**: Starting Phase 2 of the master plan. The agent added the foundational backend Pydantic models and API router endpoints for **Advanced Orders, Disputes, and Audit Logs**. It then began updating the frontend by adding new UI components (, , ) and their corresponding routes within the main  file.
+*   **Last item agent was working**: The agent was continuing the refactoring of the massive  file. It had just created a  file to centralize common imports and was about to extract the  component into its own file ().
 *   **Status**: IN PROGRESS
 *   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: Backend testing agent. The first step is to test the newly created, but empty, backend endpoints (, , ) to ensure they are registered correctly. After backend validation, use the  tool to verify the new admin pages render without crashing.
+*   **Which testing method agent to use?**: Frontend testing agent. After extracting all components, the agent must perform comprehensive regression testing using  to ensure all admin functionalities work as expected and no new bugs were introduced during the refactor. Screenshots of key admin pages should also be used to verify UI integrity.
 *   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1**: Phase 2 Features are Scaffolds Only
+*   **Issue 1**: Incomplete Frontend Refactoring
     *   **Priority**: P0
-    *   **Details**: The work on Advanced Orders, Disputes, Analytics, and Audit Logs is incomplete. The agent created the file structure, API routes, and basic UI components, but there is no implementation logic. The backend endpoints are empty, and the frontend components are placeholders.
-    *   **Attempted fixes**: None. This is the current point of progress.
+    *   **Details**: The primary admin dashboard file, , is still a large monolith containing over 15 distinct React components. This makes maintenance and future development difficult. The refactoring process has started but is not complete.
     *   **Next debug checklist**:
-        1.  Implement the backend logic for , ,  in  to fetch and return data.
-        2.  Flesh out the frontend components , , and  in  to fetch data from the new endpoints and display it in tables.
-        3.  Implement the logic for updating order statuses and resolving disputes.
-    *   **Why fix this issue and what will be achieved with the fix?**: This is a critical step towards building the operational backend requested by the user, enabling order tracking, dispute resolution, and admin oversight.
+        1.  Extract  from  into .
+        2.  Continue extracting all remaining components (Products, Categories, Orders, Disputes, etc.) into their own files within .
+        3.  Update  to import and render these new, separate components.
+        4.  Ensure all shared logic, hooks, and constants are properly managed, likely within  or other utility files.
+    *   **Why fix this issue and what will be achieved with the fix?**: Completing the refactor will significantly improve code maintainability, reduce complexity, and make it easier and safer to add new features to the admin dashboard.
     *   **Status**: IN PROGRESS
     *   **Is recurring issue?**: N
-    *   **Should Test frontend/backend/both after fix?**: Both.
+    *   **Should Test frontend/backend/both after fix?**: Frontend.
     *   **Blocked on other issue**: None.
 
 **In progress Task List**:
-*   **Task 1**: Complete Phase 2 Core Features (Orders, Disputes, Analytics, Roles)
+*   **Task 1**: Complete  Refactoring
     *   **Priority**: P0
-    *   **Where to resume**: Resume by implementing the backend logic for the placeholder API endpoints created for Orders, Disputes, and Audit Logs in .
-    *   **What will be achieved with this?**: A functional admin interface for viewing and managing orders, handling customer disputes, viewing audit logs, and basic analytics.
+    *   **Where to resume**: Resume by creating the file  and moving the corresponding component code from  into it. Then, proceed with the other 15+ components.
+    *   **What will be achieved with this?**: A fully modular and maintainable admin dashboard frontend architecture.
     *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?**: Both.
+    *   **Should Test frontend/backend/both after fix?**: Frontend.
     *   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks (P0 - Next Core Loop):**
-    *   **Roles & Permissions:** Implement a full RBAC system in the backend () and a UI in the admin dashboard to manage roles (Admin, Support, Moderator) and their permissions.
-    *   **Smart Pricing & Coupons:** Add backend logic and admin UI for creating and managing multi-use, single-use, percentage-based, and fixed-amount coupons.
-    *   **CMS & Content System:** Create backend endpoints and a frontend UI for managing static pages (About Us, Terms, FAQ) with a simple visual editor.
     *   **Internal Messaging/Support System:** Build the backend logic and UI for a ticket-based or chat-based support system between users and admins.
+    *   **Frontend UX Enhancements:** Based on the user's request for improvements, explore and implement frontend features like advanced product filtering/sorting on the customer-facing site, loading skeletons, and other UI polish.
 
 *   **Future Tasks (P1 - Long Term):**
     *   **Anti-Fraud & Abuse System:** Implement backend logic to detect duplicate accounts, limit purchase attempts, and flag suspicious behavior.
-    *   **Stock Alerts & Automation:** Integrate Telegram notifications for low-stock, out-of-stock, and new order events.
     *   **Smart Recommendation Engine:** Develop logic to show similar products or customers also bought sections.
     *   **Scheduled Tasks:** Create a system for scheduling actions like enabling/disabling offers.
     *   **Invoices & Tax:** Implement automatic PDF invoice generation for orders.
     *   **Feature Toggles:** Build a UI for admins to enable/disable major features of the site.
     *   **Backup & Disaster Recovery:** Implement a one-click backup/restore mechanism.
-    *   **Refactoring:** Break down the monolithic  and  files into a modular structure (e.g., separate router files, individual React components).
 
 **Completed work in this session**
-- **Admin Product Management:**
-    - Implemented full CRUD functionality for Products and Categories, accessible entirely from the admin dashboard UI.
-    - Implemented a feature to bulk-upload product codes from a CSV file.
-    - Implemented a feature to bulk-import new products from an Excel file.
-    - Created an advanced, multi-tabbed product creation form supporting product types (Code, Account) and variants (e.g., subscriptions).
-- **Admin Site Customization:**
-    - Created a Site Settings page in the admin panel to allow editing of site text, logos, and key promotional images.
-    - Implemented a full-featured Banner/Slider management system (backend + UI) for homepage and promotional ads.
-    - Created a UI to manage the order and visibility of homepage sections (e.g., New Products, Best Sellers).
-- **Admin User Management:**
-    - Significantly improved the Wallet Management page to allow admins to easily search for users and credit their wallets.
-- **Content & Architecture:**
-    - Implemented a direct image upload system, with files stored on the server.
-    - Seeded the database with an initial catalog of ~55 products to populate the store.
-    - Started scaffolding Phase 2 features (Orders, Disputes, Analytics, Logs) by creating placeholder backend endpoints and frontend components.
+*   **Phase 2 Completion:** Fully implemented and tested Advanced Orders, Disputes, Analytics Dashboard, and Audit Logs.
+*   **Backend Refactoring:** Successfully refactored the entire monolithic  into a modular structure with separate routers, models, and utility files.
+*   **Phase 3 Completion:** Fully implemented and tested an advanced Role-Based Access Control (RBAC) system and an enhanced coupon management system.
+*   **Telegram Integration:** Integrated Telegram notifications for new orders and disputes, including a settings page in the admin dashboard.
+*   **CMS Implementation:** Built a full Content Management System (backend + frontend) for creating and managing static pages (e.g., About Us) and FAQs.
+*   **Frontend Fixes:** Implemented a scroll to top on navigation feature for a smoother user experience.
+*   **Documentation:** Created a detailed deployment guide for Hostinger ().
+*   **Bug Fixes:** Resolved multiple critical bugs related to authentication, API endpoints, and frontend rendering.
 
 **Earlier issues found/mentioned but not fixed**
-*   **Vague requirement:** The user's request to modify the design and how products are displayed was interpreted as needing admin CRUD for products. While this was implemented, the user might also want frontend controls for sorting, filtering, and layout on the main store pages, which has not been addressed.
+*   **Vague requirement:** The user's request to modify...how products are displayed has not been fully addressed from the customer's perspective. The agent added admin controls, but frontend sorting, filtering, and layout options for users are still pending. This can be addressed as part of the UX Enhancements task.
 
 **Known issue recurrence from previous fork**
-N/A
+*   None. The flaky login issue was thoroughly debugged and resolved in this session.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB (), Pydantic, JWT. Now includes  for async file uploads. The  file has grown to over 2,500 lines and contains all models, routes, and business logic.
-- **Frontend:** React, React Router, TailwindCSS, Axios, . The  file is now over 2,100 lines and contains nearly all admin components and logic.
-- **Architecture:** A monolithic backend and a largely monolithic frontend admin panel. This is a significant source of technical debt.
+- **Backend:** FastAPI, MongoDB (), Pydantic, JWT. The architecture is now modular, with routers for each domain.
+- **Frontend:** React, React Router, TailwindCSS, Axios, . The main admin page () is a large, stateful component that is currently being refactored into smaller, more manageable pieces.
+- **Architecture:** The backend has transitioned from a monolith to a modular, API-router-based structure. The frontend is in the process of the same transition.
 
 **key DB schema**
 - **users**: 
 - **products**: 
 - **categories**: 
-- **orders**:  (New  field)
+- **orders**: 
 - **codes**: 
-- **site_settings**:  (Expanded)
-- **banners**:  (New)
-- **homepage_sections**:  (New)
-- **audit_logs**:  (New, not yet used)
-- **disputes**:  (New, not yet used)
+- **site_settings**: 
+- **banners**: 
+- **homepage_sections**: 
+- **audit_logs**: 
+- **disputes**: 
+- **roles**: (Implicit, defined in )
+- **pages**:  (New)
+- **faqs**:  (New)
 
 **changes in tech stack**
-- **CRITICAL DEVIATION**: The application is built on **React, FastAPI, and MongoDB**, which is a complete departure from the user's originally specified stack (Next.js, NestJS, PostgreSQL). This decision was made early in the project. Continue building on the existing stack.
+- No changes to the core stack (React, FastAPI, MongoDB). The significant change is the structural refactoring of the backend codebase from a single file into a scalable, modular architecture.
 
 **All files of reference**
-- : **CRITICAL**. The entire backend is in this file. It has been heavily modified.
-- : **CRITICAL**. Almost the entire admin panel is in this single file. It has been heavily modified.
-- : The new base directory for all user-uploaded static assets like banners and logos.
+- **Refactoring Target**: 
+- **Refactoring Destination**: 
+- **Refactored Backend Entry**: 
+- **New Backend Structure**: , , 
+- **Core Frontend Logic**: , 
 
 **Areas that need refactoring**:
-- **CRITICAL**: Both  and  are now extremely large and violate single-responsibility principles. They urgently need to be broken down.
-    - **Backend:** Refactor  into multiple routers (e.g., , , ) inside a new  directory. Models should also be moved to .
-    - **Frontend:** Refactor  by extracting each major management section (e.g., , , ) into its own component file within a  directory.
+- **CRITICAL/IN PROGRESS**: The  file must be fully broken down into individual component files in the  directory.
 
 **key api endpoints**
-- 
-- 
-- , 
--  (GET, PUT)
-- , 
+- All previous endpoints exist but are now defined in their respective router files in .
 - **New Endpoints:**
-    -  (POST)
+    -  (GET, PUT)
+    -  (GET, PUT)
+    -  (GET)
     -  (GET, POST, PUT, DELETE)
-    -  (GET, POST)
-    -  (POST)
-    -  (GET) (Placeholder)
-    -  (GET) (Placeholder)
-    -  (GET) (Placeholder)
+    -  (GET, POST, PUT, DELETE)
 
 **Critical Info for New Agent**
-1.  **New PRD is King:** The user's prompts, especially the one titled , have completely superseded all previous requirements. This is now the single source of truth for all future development.
-2.  **Monoliths Must Be Addressed:** The application's two core files (, ) are becoming unmaintainable. The next agent should prioritize refactoring them into a modular structure as a background or dedicated task. Propose this to the user as a necessary step for stability and future growth.
-3.  **Immediate Task:** Your first priority is to complete the half-finished Phase 2 features: build out the backend logic and frontend UI for managing orders, disputes, analytics, and audit logs. The foundation is there, but the implementation is missing.
+1.  **Refactoring is P0:** The immediate and highest-priority task is to complete the refactoring of . The user explicitly requested this. Do not start new features until this is done.
+2.  **Backend is Modular:** The backend refactoring is complete and successful. All new backend logic should follow the established modular pattern by adding to or creating new files in the  and  directories.
+3.  **User Is Engaged:** The user responds quickly in Arabic and has a clear vision. Present clear plans using  and wait for their confirmation (اكمل, نعم) before proceeding.
 4.  **Language:** All user communication MUST be in Arabic.
 
 **documents and test reports created in this job**
+-  (created and updated)
+-  (created)
+- 
 - 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **USER:** I cant add products or categories... I want the ability to edit the text in the design... and how products are displayed." (Agent responded by building full CRUD for products/categories and a site settings page).
-2.  **USER:** "How do I upload it to my IONOS hosting and connect it to a new domain?" (Agent provided detailed, step-by-step VPS deployment instructions for IONOS).
-3.  **USER:** "Ability to change the logo and image designs inside the site to match market trends and posters." (Agent responded by building the image/logo upload feature in the Site Settings).
-4.  **USER:** "I cant add balance to users. (Agent responded by completely revamping the wallet management UI to be user-friendly).
-5.  **USER:** **(ULTIMATE STRICT AI PROMPT)** Provided a massive, detailed list of requirements for a full digital marketplace.
-6.  **USER:** 1- Yes 2- B (Confirmed the agent's proposed phased plan).
-7.  **USER:** **(FINAL MASTER AI PROMPT)** Provided an even more comprehensive and structured list of requirements, becoming the new project bible.
-8.  **USER:** Complete. (Instruction to continue with the next phase).
+1.  **USER**: نعم (Yes) - Agreed to implement Roles & Permissions and Coupons.
+2.  **USER**: قستقسيم الملفات الكبيرة (Splitting the large files) - Prioritized refactoring over CMS.
+3.  **USER**: اكمل (Continue) - Acknowledged the creation of backend model files during refactoring.
+4.  **USER**: نعم اكمل وتأكد من التنقل بين الصفحات يجري بسلاسة وليس من اخر الصفحة واخبرني كيف ارفعه على هوستنجر (Yes, continue, and make sure navigation between pages is smooth... and tell me how to upload it to Hostinger) - Confirmed continuing with CMS and added two new requirements.
+5.  **USER**: نعم (Yes) - Triggered the agent to ask for clarification on the next task.
+6.  **USER**: 🛠️ تحسينات: إكمال تقسيم AdminDashboard.js - استخراج باقي المكونات تحسين تجربة المستخدم - إضافة ميزات للواجهة الأمامية (Improvements: Complete splitting AdminDashboard.js - extract remaining components. Improve user experience - add features to the frontend) - User explicitly selected the next tasks.
 
 **Project Health Check:**
-*   **Broken:** The newly added features for Advanced Orders, Disputes, and Analytics are non-functional placeholders.
-*   **Mocked:** N/A
+*   **Broken**:  is in a transitional state. While the app works, the file itself contains a mix of implemented components and components that are yet to be extracted, making it fragile.
+*   **Mocked**: N/A
 
 **3rd Party Integrations**
-- None implemented. Telegram is planned.
+*   **emergentintegrations**: Used for Telegram notifications. Configured via  and API.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES, a test run was completed after the CSV upload feature was added.
+- **Testing agent used after significant changes**: YES. Agent correctly used  after completing Phase 2 and Phase 3, reviewing the reports each time.
 - **Troubleshoot agent used after agent stuck in loop**: NO.
 - **Test files created**: None.
-- **Known regressions**: The login flow has been flaky, sometimes requiring the agent to manually re-activate the test user. This might indicate an issue in the auth logic or session handling.
+- **Known regressions**: None. All identified regressions during development were fixed.
 
 **Credentials to test flow:**
 *   **Admin User**:  / 
-*   **Note**: A previous user  also exists and was used for testing. It may be inactive.
+*   **Note**: The password was reset during the session, and the auth logic was fixed. This user is confirmed working.
 
 **What agent forgot to execute**
-*   **Refactoring:** The agent has prioritized feature delivery over architectural health. It has not addressed the growing technical debt of the monolithic  and  files, which is a critical risk for future development. The next agent must plan and execute this refactoring.</analysis>
+*   The agent has followed the user's instructions very closely and has not forgotten any explicit tasks. The broad task of UX improvements will need to be planned and clarified with the user after the current refactoring is complete.</analysis>
