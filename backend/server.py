@@ -233,6 +233,55 @@ class HomepageSectionCreate(BaseModel):
     max_items: int = 8
     product_ids: Optional[List[str]] = None  # For custom sections
 
+# Order Status Enum
+ORDER_STATUSES = {
+    "pending_payment": "في انتظار الدفع",
+    "payment_failed": "فشل الدفع",
+    "processing": "قيد المعالجة",
+    "awaiting_admin": "في انتظار إجراء الإدارة",
+    "completed": "مكتمل",
+    "delivered": "تم التسليم",
+    "cancelled": "ملغي",
+    "refunded": "مسترد",
+    "disputed": "نزاع مفتوح"
+}
+
+# Dispute Models
+class DisputeCreate(BaseModel):
+    order_id: str
+    reason: str
+    description: str
+    evidence_urls: Optional[List[str]] = None
+
+class DisputeResponse(BaseModel):
+    decision: str  # refund, reject, redeliver
+    admin_notes: str
+
+# Role & Permission Models
+ROLES = {
+    "admin": {"name": "مدير النظام", "level": 100},
+    "support": {"name": "دعم فني", "level": 50},
+    "moderator": {"name": "مشرف", "level": 30},
+    "readonly": {"name": "قراءة فقط", "level": 10}
+}
+
+PERMISSIONS = [
+    "manage_products", "manage_orders", "manage_users", "manage_wallets",
+    "manage_discounts", "manage_banners", "manage_settings", "manage_roles",
+    "view_analytics", "manage_disputes", "manage_tickets", "export_data"
+]
+
+# Audit Log
+class AuditLog(BaseModel):
+    action: str
+    entity_type: str
+    entity_id: str
+    changes: Dict[str, Any]
+    user_id: str
+    user_name: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
 # Product Code Models (Admin)
 class ProductCodeCreate(BaseModel):
     product_id: str
