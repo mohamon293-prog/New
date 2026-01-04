@@ -83,6 +83,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     { icon: Bell, label: "الإشعارات", path: "/admin/notifications" },
     { icon: Eye, label: "التحليلات", path: "/admin/analytics" },
     { icon: Eye, label: "سجل النشاطات", path: "/admin/audit" },
+    { icon: Send, label: "إشعارات Telegram", path: "/admin/telegram" },
     { icon: Settings, label: "إعدادات الموقع", path: "/admin/settings" },
   ];
 
