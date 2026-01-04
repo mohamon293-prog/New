@@ -3620,6 +3620,7 @@ export default function AdminDashboard() {
     if (path.includes("tickets")) return "الدعم الفني";
     if (path.includes("telegram")) return "إشعارات Telegram";
     if (path.includes("roles")) return "الأدوار والصلاحيات";
+    if (path.includes("cms")) return "إدارة المحتوى";
     if (path.includes("settings")) return "إعدادات الموقع";
     return "لوحة التحكم";
   };
