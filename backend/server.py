@@ -2550,6 +2550,101 @@ async def update_user_role(
     
     return {"message": "تم تحديث دور المستخدم"}
 
+# Roles Management Endpoints
+@api_router.get("/admin/roles")
+async def get_roles(admin: dict = Depends(get_admin_user)):
+    """Get all available roles and their permissions"""
+    roles_list = []
+    for role_id, role_data in ROLES.items():
+        roles_list.append({
+            "id": role_id,
+            "name": role_data["name"],
+            "level": role_data["level"],
+            "description": role_data.get("description", ""),
+            "permissions": ROLE_PERMISSIONS.get(role_id, [])
+        })
+    return roles_list
+
+@api_router.get("/admin/permissions")
+async def get_permissions(admin: dict = Depends(get_admin_user)):
+    """Get all available permissions"""
+    permission_labels = {
+        "manage_products": "إدارة المنتجات",
+        "manage_orders": "إدارة الطلبات",
+        "manage_users": "إدارة المستخدمين",
+        "manage_wallets": "إدارة المحافظ",
+        "manage_discounts": "إدارة الخصومات",
+        "manage_banners": "إدارة البانرات",
+        "manage_settings": "إدارة الإعدادات",
+        "manage_roles": "إدارة الأدوار",
+        "view_analytics": "عرض التحليلات",
+        "manage_disputes": "إدارة النزاعات",
+        "manage_tickets": "إدارة التذاكر",
+        "export_data": "تصدير البيانات",
+        "manage_telegram": "إدارة Telegram",
+        "view_audit_logs": "عرض سجل النشاطات"
+    }
+    return [{"id": p, "name": permission_labels.get(p, p)} for p in PERMISSIONS]
+
+@api_router.get("/admin/users/{user_id}/permissions")
+async def get_user_permissions(user_id: str, admin: dict = Depends(get_admin_user)):
+    """Get user's effective permissions"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    
+    role = user.get("role", "buyer")
+    role_permissions = ROLE_PERMISSIONS.get(role, [])
+    custom_permissions = user.get("permissions", [])
+    
+    # Combine role and custom permissions
+    all_permissions = list(set(role_permissions + custom_permissions))
+    
+    return {
+        "user_id": user_id,
+        "role": role,
+        "role_name": ROLES.get(role, {}).get("name", role),
+        "role_permissions": role_permissions,
+        "custom_permissions": custom_permissions,
+        "effective_permissions": all_permissions
+    }
+
+@api_router.put("/admin/users/{user_id}/permissions")
+async def update_user_permissions(
+    user_id: str,
+    request: Request,
+    permissions: List[str] = Body(..., embed=True),
+    admin: dict = Depends(get_admin_user)
+):
+    """Update user's custom permissions"""
+    if admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتغيير الصلاحيات")
+    
+    # Validate permissions
+    invalid = [p for p in permissions if p not in PERMISSIONS]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"صلاحيات غير صالحة: {', '.join(invalid)}")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    
+    old_permissions = user.get("permissions", [])
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.update_one({"id": user_id}, {"$set": {
+        "permissions": permissions,
+        "updated_at": now
+    }})
+    
+    # Log audit
+    await log_audit(admin, "update_permissions", "user", user_id, {
+        "old_permissions": old_permissions,
+        "new_permissions": permissions
+    }, request)
+    
+    return {"message": "تم تحديث صلاحيات المستخدم"}
+
 # ==================== AUDIT LOG ====================
 
 async def log_audit(admin: dict, action: str, entity_type: str, entity_id: str, changes: Dict, request: Request):
