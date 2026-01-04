@@ -118,6 +118,20 @@ class CategoryResponse(BaseModel):
     is_active: bool
 
 # Product Models
+class ProductVariant(BaseModel):
+    """Product variant (e.g., 1 month, 3 months, 12 months)"""
+    id: str = ""
+    name: str  # e.g., "شهر واحد", "3 أشهر", "سنة"
+    name_en: str = ""
+    duration_days: int = 0  # For subscriptions
+    price_jod: float
+    price_usd: float
+    original_price_jod: Optional[float] = None
+    original_price_usd: Optional[float] = None
+    stock_count: int = 0
+    sku: Optional[str] = None
+    is_active: bool = True
+
 class ProductCreate(BaseModel):
     name: str
     name_en: str
@@ -133,6 +147,15 @@ class ProductCreate(BaseModel):
     platform: str  # playstation, xbox, steam, nintendo, etc.
     region: str = "عالمي"
     is_featured: bool = False
+    # NEW: Product type and variants
+    product_type: str = "digital_code"  # digital_code, existing_account, new_account
+    has_variants: bool = False
+    variants: Optional[List[ProductVariant]] = None
+    # Fields for account type products
+    requires_email: bool = False
+    requires_password: bool = False
+    requires_phone: bool = False
+    delivery_instructions: Optional[str] = None
 
 class ProductResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -157,6 +180,58 @@ class ProductResponse(BaseModel):
     rating: float
     review_count: int
     sold_count: int
+    # NEW fields
+    product_type: str = "digital_code"
+    has_variants: bool = False
+    variants: Optional[List[Dict]] = None
+    requires_email: bool = False
+    requires_password: bool = False
+    requires_phone: bool = False
+    delivery_instructions: Optional[str] = None
+
+# Banner/Slider Models
+class BannerCreate(BaseModel):
+    title: str = ""
+    title_en: str = ""
+    subtitle: str = ""
+    image_url: str
+    link_type: str = "none"  # none, product, category, url
+    link_value: str = ""
+    button_text: str = ""
+    position: str = "hero"  # hero, sidebar, popup, footer
+    priority: int = 0
+    starts_at: Optional[str] = None
+    ends_at: Optional[str] = None
+    is_active: bool = True
+
+class BannerResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    title: str
+    title_en: str
+    subtitle: str
+    image_url: str
+    link_type: str
+    link_value: str
+    button_text: str
+    position: str
+    priority: int
+    starts_at: Optional[str]
+    ends_at: Optional[str]
+    is_active: bool
+    created_at: str
+    clicks: int = 0
+    views: int = 0
+
+# Homepage Section Models
+class HomepageSectionCreate(BaseModel):
+    name: str  # e.g., "منتجات جديدة", "الأكثر مبيعاً"
+    name_en: str
+    section_type: str  # new_products, best_sellers, featured, custom
+    is_active: bool = True
+    order: int = 0
+    max_items: int = 8
+    product_ids: Optional[List[str]] = None  # For custom sections
 
 # Product Code Models (Admin)
 class ProductCodeCreate(BaseModel):
