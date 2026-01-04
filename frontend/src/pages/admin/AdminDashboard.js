@@ -1554,6 +1554,9 @@ export default function AdminDashboard() {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === "/admin") return "لوحة التحكم";
+    if (path.includes("banners")) return "البانرات والسلايدر";
+    if (path.includes("homepage")) return "أقسام الرئيسية";
+    if (path.includes("import")) return "رفع Excel";
     if (path.includes("users")) return "المستخدمين";
     if (path.includes("products")) return "المنتجات";
     if (path.includes("categories")) return "الأقسام";
@@ -1591,6 +1594,9 @@ export default function AdminDashboard() {
         <div className="p-4 md:p-6">
           <Routes>
             <Route index element={<div className="space-y-6"><DashboardStats /></div>} />
+            <Route path="banners" element={<BannersManagement />} />
+            <Route path="homepage" element={<HomepageSectionsManagement />} />
+            <Route path="import" element={<ExcelImport />} />
             <Route path="users" element={<UsersManagement />} />
             <Route path="products" element={<ProductsManagement />} />
             <Route path="categories" element={<CategoriesManagement />} />
