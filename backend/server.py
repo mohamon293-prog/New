@@ -427,33 +427,46 @@ class AuthResponse(BaseModel):
 # Discount Code Models
 class DiscountCodeCreate(BaseModel):
     code: str
-    discount_type: str = "percentage"  # percentage or fixed
+    name: str = ""  # Human readable name
+    description: str = ""
+    discount_type: str = "percentage"  # percentage, fixed, free_shipping
     discount_value: float
     min_purchase: float = 0
-    max_uses: Optional[int] = None
+    max_discount: Optional[float] = None  # Max discount for percentage
+    max_uses: Optional[int] = None  # Total uses allowed
+    max_uses_per_user: int = 1  # Uses per user
     valid_from: Optional[str] = None
     valid_until: Optional[str] = None
     applicable_products: Optional[List[str]] = None  # None = all products
     applicable_categories: Optional[List[str]] = None
+    first_purchase_only: bool = False  # Only for new customers
+    requires_min_items: int = 0  # Minimum items in cart
 
 class DiscountCodeResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     code: str
+    name: str
+    description: str
     discount_type: str
     discount_value: float
     min_purchase: float
+    max_discount: Optional[float]
     max_uses: Optional[int]
+    max_uses_per_user: int
     used_count: int
     valid_from: Optional[str]
     valid_until: Optional[str]
     is_active: bool
+    first_purchase_only: bool
+    requires_min_items: int
     created_at: str
 
 class ApplyDiscountRequest(BaseModel):
     code: str
     subtotal: float
     product_ids: List[str] = []
+    item_count: int = 1
 
 # Notification Models
 class NotificationResponse(BaseModel):
