@@ -1637,6 +1637,26 @@ async def apply_discount_code(request: ApplyDiscountRequest, user: dict = Depend
     if discount.get("max_uses") and discount["used_count"] >= discount["max_uses"]:
         raise HTTPException(status_code=400, detail="تم استخدام كود الخصم الحد الأقصى من المرات")
     
+    # Check per-user usage limit
+    max_per_user = discount.get("max_uses_per_user", 1)
+    user_usage = await db.discount_usage.count_documents({
+        "discount_id": discount["id"],
+        "user_id": user["id"]
+    })
+    if user_usage >= max_per_user:
+        raise HTTPException(status_code=400, detail="لقد استخدمت هذا الكود من قبل")
+    
+    # Check first purchase only
+    if discount.get("first_purchase_only", False):
+        user_orders = await db.orders.count_documents({"user_id": user["id"]})
+        if user_orders > 0:
+            raise HTTPException(status_code=400, detail="هذا الكود للمشترين الجدد فقط")
+    
+    # Check minimum items
+    min_items = discount.get("requires_min_items", 0)
+    if request.item_count < min_items:
+        raise HTTPException(status_code=400, detail=f"يتطلب هذا الكود {min_items} منتجات على الأقل")
+    
     # Check minimum purchase
     if request.subtotal < discount["min_purchase"]:
         raise HTTPException(
@@ -1647,12 +1667,16 @@ async def apply_discount_code(request: ApplyDiscountRequest, user: dict = Depend
     # Calculate discount
     if discount["discount_type"] == "percentage":
         discount_amount = request.subtotal * (discount["discount_value"] / 100)
+        # Apply max discount cap
+        if discount.get("max_discount"):
+            discount_amount = min(discount_amount, discount["max_discount"])
     else:
         discount_amount = min(discount["discount_value"], request.subtotal)
     
     return {
         "valid": True,
         "code": code,
+        "name": discount.get("name", code),
         "discount_type": discount["discount_type"],
         "discount_value": discount["discount_value"],
         "discount_amount": round(discount_amount, 2),
