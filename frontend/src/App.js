@@ -1,5 +1,5 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { Layout } from "./components/layout/Layout";
@@ -22,6 +22,17 @@ import FAQPage from "./pages/FAQPage";
 import HowToBuyPage from "./pages/HowToBuyPage";
 
 import "./App.css";
+
+// Scroll to Top Component
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
+  
+  return null;
+};
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
