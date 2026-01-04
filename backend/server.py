@@ -2584,8 +2584,17 @@ async def resolve_dispute(
 
 @api_router.get("/admin/roles")
 async def get_roles(admin: dict = Depends(get_admin_user)):
-    """Get available roles"""
-    return {"roles": ROLES, "permissions": PERMISSIONS}
+    """Get all available roles and their permissions"""
+    roles_list = []
+    for role_id, role_data in ROLES.items():
+        roles_list.append({
+            "id": role_id,
+            "name": role_data["name"],
+            "level": role_data["level"],
+            "description": role_data.get("description", ""),
+            "permissions": ROLE_PERMISSIONS.get(role_id, [])
+        })
+    return roles_list
 
 @api_router.put("/admin/users/{user_id}/role")
 async def update_user_role(
@@ -2619,15 +2628,6 @@ async def update_user_role(
     await log_audit(admin, "update_role", "user", user_id, {"old_role": old_role, "new_role": role}, request)
     
     return {"message": "تم تحديث دور المستخدم"}
-
-# Roles Management Endpoints
-@api_router.get("/admin/roles")
-async def get_roles(admin: dict = Depends(get_admin_user)):
-    """Get all available roles and their permissions"""
-    roles_list = []
-    for role_id, role_data in ROLES.items():
-        roles_list.append({
-            "id": role_id,
             "name": role_data["name"],
             "level": role_data["level"],
             "description": role_data.get("description", ""),
