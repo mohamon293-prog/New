@@ -264,17 +264,61 @@ class DisputeResponse(BaseModel):
 
 # Role & Permission Models
 ROLES = {
-    "admin": {"name": "مدير النظام", "level": 100},
-    "support": {"name": "دعم فني", "level": 50},
-    "moderator": {"name": "مشرف", "level": 30},
-    "readonly": {"name": "قراءة فقط", "level": 10}
+    "admin": {"name": "مدير النظام", "level": 100, "description": "صلاحيات كاملة على النظام"},
+    "support": {"name": "دعم فني", "level": 50, "description": "إدارة الطلبات والنزاعات والمستخدمين"},
+    "moderator": {"name": "مشرف", "level": 30, "description": "إدارة المنتجات والمحتوى"},
+    "readonly": {"name": "قراءة فقط", "level": 10, "description": "عرض البيانات فقط بدون تعديل"},
+    "buyer": {"name": "مشتري", "level": 1, "description": "مستخدم عادي"}
+}
+
+# Define permissions for each role
+ROLE_PERMISSIONS = {
+    "admin": [
+        "manage_products", "manage_orders", "manage_users", "manage_wallets",
+        "manage_discounts", "manage_banners", "manage_settings", "manage_roles",
+        "view_analytics", "manage_disputes", "manage_tickets", "export_data",
+        "manage_telegram", "view_audit_logs"
+    ],
+    "support": [
+        "manage_orders", "manage_users", "manage_wallets", "manage_disputes",
+        "manage_tickets", "view_analytics"
+    ],
+    "moderator": [
+        "manage_products", "manage_banners", "manage_discounts", "view_analytics"
+    ],
+    "readonly": [
+        "view_analytics"
+    ],
+    "buyer": []
 }
 
 PERMISSIONS = [
     "manage_products", "manage_orders", "manage_users", "manage_wallets",
     "manage_discounts", "manage_banners", "manage_settings", "manage_roles",
-    "view_analytics", "manage_disputes", "manage_tickets", "export_data"
+    "view_analytics", "manage_disputes", "manage_tickets", "export_data",
+    "manage_telegram", "view_audit_logs"
 ]
+
+# Permission check helper
+def has_permission(user: dict, permission: str) -> bool:
+    """Check if user has a specific permission"""
+    role = user.get("role", "buyer")
+    # Check custom permissions first
+    custom_permissions = user.get("permissions", [])
+    if permission in custom_permissions:
+        return True
+    # Then check role permissions
+    return permission in ROLE_PERMISSIONS.get(role, [])
+
+def require_permission(permission: str):
+    """Dependency to check permission"""
+    async def check(user: dict = Depends(get_current_user)):
+        if user.get("role") == "admin":
+            return user  # Admin has all permissions
+        if not has_permission(user, permission):
+            raise HTTPException(status_code=403, detail=f"ليس لديك صلاحية: {permission}")
+        return user
+    return check
 
 # Audit Log
 class AuditLog(BaseModel):
