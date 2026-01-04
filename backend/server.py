@@ -2342,6 +2342,11 @@ async def create_dispute(dispute: DisputeCreate, request: Request, user: dict = 
     # Update order status
     await db.orders.update_one({"id": dispute.order_id}, {"$set": {"status": "disputed"}})
     
+    # Send Telegram notification for new dispute
+    telegram_settings = await db.site_settings.find_one({"type": "telegram"})
+    if telegram_settings and telegram_settings.get("notify_disputes", True):
+        await notify_new_dispute(dispute_doc)
+    
     return {"message": "تم إنشاء النزاع", "id": dispute_id}
 
 @api_router.get("/disputes")
