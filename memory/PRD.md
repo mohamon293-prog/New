@@ -86,11 +86,25 @@
 
 ## 🔵 مهام تقنية
 
-### إعادة الهيكلة (Refactoring)
-- [ ] تقسيم `server.py` إلى routers منفصلة
-- [ ] تقسيم `AdminDashboard.js` إلى مكونات منفصلة
-- [ ] نقل Models إلى `/app/backend/models/`
-- [ ] إنشاء `/app/backend/routes/`
+### إعادة الهيكلة (Refactoring) ✅ (مكتمل جزئياً 2025-01-04)
+
+**Backend - مكتمل:**
+- [x] تقسيم `server.py` (~3100 سطر) إلى:
+  - `/app/backend/server.py` - الملف الرئيسي (~700 سطر)
+  - `/app/backend/routes/auth.py` - المصادقة
+  - `/app/backend/routes/products.py` - المنتجات والفئات
+  - `/app/backend/routes/orders.py` - الطلبات
+  - `/app/backend/routes/admin.py` - الإدارة والتحليلات
+  - `/app/backend/routes/disputes.py` - النزاعات
+  - `/app/backend/routes/discounts.py` - الكوبونات
+  - `/app/backend/models/schemas.py` - Pydantic Models
+  - `/app/backend/models/constants.py` - الثوابت والأدوار
+  - `/app/backend/utils/database.py` - اتصال قاعدة البيانات
+
+**Frontend - جزئي:**
+- [x] إنشاء `/app/frontend/src/components/admin/`
+- [x] استخراج `DashboardStats` كمكون منفصل
+- [ ] استخراج باقي المكونات (UsersManagement, ProductsManagement, etc.)
 
 ---
 
