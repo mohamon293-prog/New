@@ -310,11 +310,22 @@ const ProductsManagement = () => {
   const [addingCodes, setAddingCodes] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const [productForm, setProductForm] = useState({
-    name: "", name_en: "", slug: "", description: "", category_id: "",
+    name: "", name_en: "", slug: "", description: "", description_en: "", category_id: "",
     price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "",
-    image_url: "", platform: "", region: "عالمي", is_featured: false
+    image_url: "", platform: "", region: "عالمي", is_featured: false,
+    // New fields for product types
+    product_type: "digital_code", // digital_code, existing_account, new_account
+    has_variants: false,
+    variants: [],
+    requires_email: false,
+    requires_password: false,
+    requires_phone: false,
+    delivery_instructions: ""
   });
+  const [activeTab, setActiveTab] = useState("basic");
 
   useEffect(() => {
     fetchProducts();
@@ -341,6 +352,28 @@ const ProductsManagement = () => {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "products");
+
+    try {
+      const response = await axios.post(`${API_URL}/upload/image`, formData, {
+        headers: { ...getAuthHeader(), "Content-Type": "multipart/form-data" }
+      });
+      setProductForm({ ...productForm, image_url: response.data.url });
+      toast.success("تم رفع الصورة");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "فشل في رفع الصورة");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
@@ -350,6 +383,14 @@ const ProductsManagement = () => {
         price_usd: parseFloat(productForm.price_usd),
         original_price_jod: productForm.original_price_jod ? parseFloat(productForm.original_price_jod) : null,
         original_price_usd: productForm.original_price_usd ? parseFloat(productForm.original_price_usd) : null,
+        variants: productForm.has_variants ? productForm.variants.map(v => ({
+          ...v,
+          id: v.id || `var_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          price_jod: parseFloat(v.price_jod),
+          price_usd: parseFloat(v.price_usd),
+          original_price_jod: v.original_price_jod ? parseFloat(v.original_price_jod) : null,
+          original_price_usd: v.original_price_usd ? parseFloat(v.original_price_usd) : null,
+        })) : null
       };
       
       if (editProduct) {
@@ -360,30 +401,69 @@ const ProductsManagement = () => {
         toast.success("تم إنشاء المنتج");
       }
       setShowCreateDialog(false);
-      setEditProduct(null);
-      setProductForm({
-        name: "", name_en: "", slug: "", description: "", category_id: "",
-        price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "",
-        image_url: "", platform: "", region: "عالمي", is_featured: false
-      });
+      resetForm();
       fetchProducts();
     } catch (error) {
       toast.error(error.response?.data?.detail || "حدث خطأ");
     }
   };
 
+  const resetForm = () => {
+    setEditProduct(null);
+    setActiveTab("basic");
+    setProductForm({
+      name: "", name_en: "", slug: "", description: "", description_en: "", category_id: "",
+      price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "",
+      image_url: "", platform: "", region: "عالمي", is_featured: false,
+      product_type: "digital_code", has_variants: false, variants: [],
+      requires_email: false, requires_password: false, requires_phone: false, delivery_instructions: ""
+    });
+  };
+
   const openEditProduct = (product) => {
     setEditProduct(product);
     setProductForm({
       name: product.name, name_en: product.name_en, slug: product.slug,
-      description: product.description, category_id: product.category_id,
+      description: product.description, description_en: product.description_en || "",
+      category_id: product.category_id,
       price_jod: product.price_jod, price_usd: product.price_usd,
       original_price_jod: product.original_price_jod || "",
       original_price_usd: product.original_price_usd || "",
       image_url: product.image_url, platform: product.platform,
-      region: product.region, is_featured: product.is_featured
+      region: product.region, is_featured: product.is_featured,
+      product_type: product.product_type || "digital_code",
+      has_variants: product.has_variants || false,
+      variants: product.variants || [],
+      requires_email: product.requires_email || false,
+      requires_password: product.requires_password || false,
+      requires_phone: product.requires_phone || false,
+      delivery_instructions: product.delivery_instructions || ""
     });
     setShowCreateDialog(true);
+  };
+
+  const addVariant = () => {
+    setProductForm({
+      ...productForm,
+      variants: [...productForm.variants, {
+        id: "", name: "", name_en: "", duration_days: 30,
+        price_jod: "", price_usd: "", original_price_jod: "", original_price_usd: "",
+        stock_count: 0, sku: "", is_active: true
+      }]
+    });
+  };
+
+  const updateVariant = (index, field, value) => {
+    const newVariants = [...productForm.variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setProductForm({ ...productForm, variants: newVariants });
+  };
+
+  const removeVariant = (index) => {
+    setProductForm({
+      ...productForm,
+      variants: productForm.variants.filter((_, i) => i !== index)
+    });
   };
 
   const handleAddCodes = async () => {
