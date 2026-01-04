@@ -2154,9 +2154,505 @@ async def reorder_homepage_sections(order: List[str] = Body(...), admin: dict = 
         await db.homepage_sections.update_one({"id": section_id}, {"$set": {"order": i}})
     return {"message": "تم إعادة الترتيب"}
 
+# ==================== ADVANCED ORDERS MANAGEMENT ====================
+
+@api_router.get("/admin/orders/advanced")
+async def get_advanced_orders(
+    admin: dict = Depends(get_admin_user),
+    status: Optional[str] = None,
+    product_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20
+):
+    """Get orders with advanced filtering"""
+    query = {}
+    
+    if status:
+        query["status"] = status
+    if product_type:
+        query["product_type"] = product_type
+    if date_from:
+        query["created_at"] = {"$gte": date_from}
+    if date_to:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = date_to
+        else:
+            query["created_at"] = {"$lte": date_to}
+    if search:
+        query["$or"] = [
+            {"order_number": {"$regex": search, "$options": "i"}},
+            {"user_email": {"$regex": search, "$options": "i"}}
+        ]
+    
+    skip = (page - 1) * limit
+    orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.orders.count_documents(query)
+    
+    return {
+        "orders": orders,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.put("/admin/orders/{order_id}/status")
+async def update_order_status(
+    order_id: str,
+    request: Request,
+    status: str = Body(..., embed=True),
+    admin_notes: Optional[str] = Body(None, embed=True),
+    admin: dict = Depends(get_admin_user)
+):
+    """Update order status"""
+    if status not in ORDER_STATUSES:
+        raise HTTPException(status_code=400, detail="حالة غير صالحة")
+    
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    
+    old_status = order.get("status")
+    now = datetime.now(timezone.utc).isoformat()
+    
+    update_data = {
+        "status": status,
+        "updated_at": now,
+        "updated_by": admin["id"]
+    }
+    
+    if admin_notes:
+        update_data["admin_notes"] = admin_notes
+    
+    # Add status history
+    status_history = order.get("status_history", [])
+    status_history.append({
+        "from": old_status,
+        "to": status,
+        "by": admin["id"],
+        "by_name": admin["name"],
+        "notes": admin_notes,
+        "at": now
+    })
+    update_data["status_history"] = status_history
+    
+    await db.orders.update_one({"id": order_id}, {"$set": update_data})
+    
+    # Log audit
+    await log_audit(admin, "update_order_status", "order", order_id, {"old_status": old_status, "new_status": status}, request)
+    
+    # Notify user
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": order["user_id"],
+        "type": "order_update",
+        "title": "تحديث حالة الطلب",
+        "message": f"تم تحديث حالة طلبك #{order.get('order_number', order_id[:8])} إلى: {ORDER_STATUSES[status]}",
+        "reference_id": order_id,
+        "is_read": False,
+        "created_at": now
+    })
+    
+    return {"message": "تم تحديث حالة الطلب"}
+
+@api_router.post("/admin/orders/{order_id}/deliver")
+async def deliver_order(
+    order_id: str,
+    request: Request,
+    delivery_data: Dict[str, Any] = Body(...),
+    admin: dict = Depends(get_admin_user)
+):
+    """Manually deliver order (for account type products)"""
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "status": "delivered",
+        "delivery_data": delivery_data,
+        "delivered_at": now,
+        "delivered_by": admin["id"],
+        "updated_at": now
+    }})
+    
+    # Log audit
+    await log_audit(admin, "deliver_order", "order", order_id, {"delivery_data": "***"}, request)
+    
+    return {"message": "تم تسليم الطلب"}
+
+# ==================== DISPUTES SYSTEM ====================
+
+@api_router.post("/disputes")
+async def create_dispute(dispute: DisputeCreate, request: Request, user: dict = Depends(get_current_user)):
+    """Create a new dispute"""
+    order = await db.orders.find_one({"id": dispute.order_id, "user_id": user["id"]})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    
+    # Check if dispute already exists
+    existing = await db.disputes.find_one({"order_id": dispute.order_id, "status": {"$ne": "closed"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="يوجد نزاع مفتوح لهذا الطلب")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    dispute_id = str(uuid.uuid4())
+    
+    dispute_doc = {
+        "id": dispute_id,
+        "order_id": dispute.order_id,
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "user_email": user["email"],
+        "reason": dispute.reason,
+        "description": dispute.description,
+        "evidence_urls": dispute.evidence_urls or [],
+        "status": "open",
+        "messages": [{
+            "from": "user",
+            "name": user["name"],
+            "message": dispute.description,
+            "at": now
+        }],
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.disputes.insert_one(dispute_doc)
+    
+    # Update order status
+    await db.orders.update_one({"id": dispute.order_id}, {"$set": {"status": "disputed"}})
+    
+    return {"message": "تم إنشاء النزاع", "id": dispute_id}
+
+@api_router.get("/disputes")
+async def get_user_disputes(user: dict = Depends(get_current_user)):
+    """Get user's disputes"""
+    disputes = await db.disputes.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return disputes
+
+@api_router.get("/admin/disputes")
+async def get_all_disputes(admin: dict = Depends(get_admin_user), status: Optional[str] = None):
+    """Get all disputes for admin"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    disputes = await db.disputes.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return disputes
+
+@api_router.post("/admin/disputes/{dispute_id}/reply")
+async def reply_to_dispute(
+    dispute_id: str,
+    message: str = Body(..., embed=True),
+    admin: dict = Depends(get_admin_user)
+):
+    """Reply to a dispute"""
+    dispute = await db.disputes.find_one({"id": dispute_id})
+    if not dispute:
+        raise HTTPException(status_code=404, detail="النزاع غير موجود")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    messages = dispute.get("messages", [])
+    messages.append({
+        "from": "admin",
+        "name": admin["name"],
+        "message": message,
+        "at": now
+    })
+    
+    await db.disputes.update_one({"id": dispute_id}, {"$set": {
+        "messages": messages,
+        "status": "in_progress",
+        "updated_at": now
+    }})
+    
+    return {"message": "تم إرسال الرد"}
+
+@api_router.post("/admin/disputes/{dispute_id}/resolve")
+async def resolve_dispute(
+    dispute_id: str,
+    request: Request,
+    response: DisputeResponse,
+    admin: dict = Depends(get_admin_user)
+):
+    """Resolve a dispute"""
+    dispute = await db.disputes.find_one({"id": dispute_id})
+    if not dispute:
+        raise HTTPException(status_code=404, detail="النزاع غير موجود")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    order = await db.orders.find_one({"id": dispute["order_id"]})
+    
+    resolution_data = {
+        "status": "resolved",
+        "decision": response.decision,
+        "admin_notes": response.admin_notes,
+        "resolved_by": admin["id"],
+        "resolved_at": now,
+        "updated_at": now
+    }
+    
+    # Handle refund
+    if response.decision == "refund" and order:
+        refund_amount = order.get("total_jod", 0)
+        
+        # Credit wallet
+        await db.wallet_transactions.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": dispute["user_id"],
+            "type": "credit",
+            "amount": refund_amount,
+            "currency": "JOD",
+            "description": f"استرداد - نزاع #{dispute_id[:8]}",
+            "reference_type": "dispute",
+            "reference_id": dispute_id,
+            "created_at": now
+        })
+        
+        # Update order status
+        await db.orders.update_one({"id": dispute["order_id"]}, {"$set": {"status": "refunded"}})
+        
+        resolution_data["refund_amount"] = refund_amount
+    
+    elif response.decision == "redeliver":
+        await db.orders.update_one({"id": dispute["order_id"]}, {"$set": {"status": "awaiting_admin"}})
+    
+    elif response.decision == "reject":
+        await db.orders.update_one({"id": dispute["order_id"]}, {"$set": {"status": "completed"}})
+    
+    await db.disputes.update_one({"id": dispute_id}, {"$set": resolution_data})
+    
+    # Notify user
+    decision_text = {"refund": "تم قبول الاسترداد", "redeliver": "سيتم إعادة التسليم", "reject": "تم رفض النزاع"}
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": dispute["user_id"],
+        "type": "dispute_resolved",
+        "title": "تم حل النزاع",
+        "message": f"تم حل نزاعك: {decision_text.get(response.decision, '')}. {response.admin_notes}",
+        "reference_id": dispute_id,
+        "is_read": False,
+        "created_at": now
+    })
+    
+    # Log audit
+    await log_audit(admin, "resolve_dispute", "dispute", dispute_id, {"decision": response.decision}, request)
+    
+    return {"message": "تم حل النزاع"}
+
+# ==================== ROLES & PERMISSIONS ====================
+
+@api_router.get("/admin/roles")
+async def get_roles(admin: dict = Depends(get_admin_user)):
+    """Get available roles"""
+    return {"roles": ROLES, "permissions": PERMISSIONS}
+
+@api_router.put("/admin/users/{user_id}/role")
+async def update_user_role(
+    user_id: str,
+    request: Request,
+    role: str = Body(..., embed=True),
+    custom_permissions: Optional[List[str]] = Body(None, embed=True),
+    admin: dict = Depends(get_admin_user)
+):
+    """Update user role"""
+    if admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتغيير الأدوار")
+    
+    if role not in ROLES:
+        raise HTTPException(status_code=400, detail="دور غير صالح")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    
+    old_role = user.get("role")
+    now = datetime.now(timezone.utc).isoformat()
+    
+    update_data = {"role": role, "updated_at": now}
+    if custom_permissions:
+        update_data["custom_permissions"] = custom_permissions
+    
+    await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    # Log audit
+    await log_audit(admin, "update_role", "user", user_id, {"old_role": old_role, "new_role": role}, request)
+    
+    return {"message": "تم تحديث دور المستخدم"}
+
+# ==================== AUDIT LOG ====================
+
+async def log_audit(admin: dict, action: str, entity_type: str, entity_id: str, changes: Dict, request: Request):
+    """Log an audit entry"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "action": action,
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "changes": changes,
+        "user_id": admin["id"],
+        "user_name": admin["name"],
+        "user_role": admin.get("role", "admin"),
+        "ip_address": request.client.host if request.client else None,
+        "user_agent": request.headers.get("user-agent"),
+        "created_at": now
+    })
+
+@api_router.get("/admin/audit-logs")
+async def get_audit_logs(
+    admin: dict = Depends(get_admin_user),
+    entity_type: Optional[str] = None,
+    action: Optional[str] = None,
+    user_id: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50
+):
+    """Get audit logs"""
+    if admin.get("role") not in ["admin"]:
+        raise HTTPException(status_code=403, detail="غير مصرح لك")
+    
+    query = {}
+    if entity_type:
+        query["entity_type"] = entity_type
+    if action:
+        query["action"] = action
+    if user_id:
+        query["user_id"] = user_id
+    
+    skip = (page - 1) * limit
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.audit_logs.count_documents(query)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+# ==================== ANALYTICS DASHBOARD ====================
+
+@api_router.get("/admin/analytics/overview")
+async def get_analytics_overview(admin: dict = Depends(get_admin_user)):
+    """Get analytics overview"""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    week_start = (now - timedelta(days=7)).isoformat()
+    month_start = (now - timedelta(days=30)).isoformat()
+    
+    # Today's stats
+    today_orders = await db.orders.count_documents({"created_at": {"$gte": today_start}})
+    today_revenue = await db.orders.aggregate([
+        {"$match": {"created_at": {"$gte": today_start}, "status": {"$in": ["completed", "delivered"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_jod"}}}
+    ]).to_list(1)
+    today_revenue = today_revenue[0]["total"] if today_revenue else 0
+    
+    # Weekly stats
+    week_orders = await db.orders.count_documents({"created_at": {"$gte": week_start}})
+    week_revenue = await db.orders.aggregate([
+        {"$match": {"created_at": {"$gte": week_start}, "status": {"$in": ["completed", "delivered"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_jod"}}}
+    ]).to_list(1)
+    week_revenue = week_revenue[0]["total"] if week_revenue else 0
+    
+    # Monthly stats
+    month_orders = await db.orders.count_documents({"created_at": {"$gte": month_start}})
+    month_revenue = await db.orders.aggregate([
+        {"$match": {"created_at": {"$gte": month_start}, "status": {"$in": ["completed", "delivered"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_jod"}}}
+    ]).to_list(1)
+    month_revenue = month_revenue[0]["total"] if month_revenue else 0
+    
+    # Total stats
+    total_users = await db.users.count_documents({})
+    total_orders = await db.orders.count_documents({})
+    total_products = await db.products.count_documents({"is_active": True})
+    pending_orders = await db.orders.count_documents({"status": {"$in": ["pending_payment", "processing", "awaiting_admin"]}})
+    open_disputes = await db.disputes.count_documents({"status": {"$in": ["open", "in_progress"]}})
+    
+    # Top products
+    top_products = await db.products.find({"is_active": True}, {"_id": 0, "id": 1, "name": 1, "sold_count": 1}).sort("sold_count", -1).limit(5).to_list(5)
+    
+    return {
+        "today": {"orders": today_orders, "revenue": today_revenue},
+        "week": {"orders": week_orders, "revenue": week_revenue},
+        "month": {"orders": month_orders, "revenue": month_revenue},
+        "totals": {
+            "users": total_users,
+            "orders": total_orders,
+            "products": total_products,
+            "pending_orders": pending_orders,
+            "open_disputes": open_disputes
+        },
+        "top_products": top_products
+    }
+
+@api_router.get("/admin/analytics/chart")
+async def get_analytics_chart(
+    admin: dict = Depends(get_admin_user),
+    period: str = "week"  # week, month, year
+):
+    """Get chart data for analytics"""
+    now = datetime.now(timezone.utc)
+    
+    if period == "week":
+        days = 7
+    elif period == "month":
+        days = 30
+    else:
+        days = 365
+    
+    chart_data = []
+    for i in range(days, -1, -1):
+        day = now - timedelta(days=i)
+        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        day_end = day.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+        
+        day_orders = await db.orders.count_documents({"created_at": {"$gte": day_start, "$lte": day_end}})
+        day_revenue = await db.orders.aggregate([
+            {"$match": {"created_at": {"$gte": day_start, "$lte": day_end}, "status": {"$in": ["completed", "delivered"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_jod"}}}
+        ]).to_list(1)
+        
+        chart_data.append({
+            "date": day.strftime("%Y-%m-%d"),
+            "orders": day_orders,
+            "revenue": day_revenue[0]["total"] if day_revenue else 0
+        })
+    
+    return chart_data
+
+# ==================== USER ACTIVITY TRACKING ====================
+
+@api_router.post("/activity/heartbeat")
+async def user_heartbeat(user: dict = Depends(get_current_user)):
+    """Update user's last activity"""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one({"id": user["id"]}, {"$set": {"last_seen": now, "is_online": True}})
+    return {"status": "ok"}
+
+@api_router.get("/admin/users/online")
+async def get_online_users(admin: dict = Depends(get_admin_user)):
+    """Get currently online users"""
+    # Consider users online if last seen within 5 minutes
+    threshold = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    users = await db.users.find(
+        {"last_seen": {"$gte": threshold}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "last_seen": 1}
+    ).to_list(100)
+    return users
+
 @api_router.get("/")
 async def root():
-    return {"message": "مرحباً بك في Gamelo API", "version": "1.0.0"}
+    return {"message": "مرحباً بك في Gamelo API", "version": "2.0.0"}
 
 # Include the router in the main app
 app.include_router(api_router)
