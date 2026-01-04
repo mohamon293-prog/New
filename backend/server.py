@@ -53,6 +53,7 @@ from routes.orders import router as orders_router
 from routes.admin import router as admin_router
 from routes.disputes import router as disputes_router
 from routes.discounts import router as discounts_router
+from routes.cms import router as cms_router
 
 # Import models and utils
 from models.schemas import (
@@ -68,6 +69,11 @@ from utils.database import (
 # Include routers
 api_router.include_router(auth_router)
 api_router.include_router(products_router)
+api_router.include_router(orders_router)
+api_router.include_router(admin_router)
+api_router.include_router(disputes_router)
+api_router.include_router(discounts_router)
+api_router.include_router(cms_router)
 api_router.include_router(orders_router)
 api_router.include_router(admin_router)
 api_router.include_router(disputes_router)
