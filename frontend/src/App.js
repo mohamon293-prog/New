@@ -125,6 +125,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
+          <ScrollToTop />
           <AppRoutes />
         </CartProvider>
       </AuthProvider>
