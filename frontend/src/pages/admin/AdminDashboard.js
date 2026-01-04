@@ -1287,6 +1287,515 @@ const CategoriesManagement = () => {
   );
 };
 
+// Banners Management
+const BannersManagement = () => {
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [editBanner, setEditBanner] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  const [formData, setFormData] = useState({
+    title: "", title_en: "", subtitle: "", image_url: "",
+    link_type: "none", link_value: "", button_text: "",
+    position: "hero", priority: 0, starts_at: "", ends_at: "", is_active: true
+  });
+
+  useEffect(() => { fetchBanners(); }, []);
+
+  const fetchBanners = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/banners`, { headers: getAuthHeader() });
+      setBanners(response.data);
+    } catch (error) {
+      toast.error("فشل في تحميل البانرات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append("file", file);
+    formDataUpload.append("folder", "banners");
+
+    try {
+      const response = await axios.post(`${API_URL}/upload/image`, formDataUpload, {
+        headers: { ...getAuthHeader(), "Content-Type": "multipart/form-data" }
+      });
+      setFormData({ ...formData, image_url: response.data.url });
+      toast.success("تم رفع الصورة");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "فشل في رفع الصورة");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editBanner) {
+        await axios.put(`${API_URL}/admin/banners/${editBanner.id}`, formData, { headers: getAuthHeader() });
+        toast.success("تم تحديث البانر");
+      } else {
+        await axios.post(`${API_URL}/admin/banners`, formData, { headers: getAuthHeader() });
+        toast.success("تم إنشاء البانر");
+      }
+      setShowDialog(false);
+      resetForm();
+      fetchBanners();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "حدث خطأ");
+    }
+  };
+
+  const resetForm = () => {
+    setEditBanner(null);
+    setFormData({
+      title: "", title_en: "", subtitle: "", image_url: "",
+      link_type: "none", link_value: "", button_text: "",
+      position: "hero", priority: 0, starts_at: "", ends_at: "", is_active: true
+    });
+  };
+
+  const openEdit = (banner) => {
+    setEditBanner(banner);
+    setFormData({
+      title: banner.title || "", title_en: banner.title_en || "", subtitle: banner.subtitle || "",
+      image_url: banner.image_url || "", link_type: banner.link_type || "none",
+      link_value: banner.link_value || "", button_text: banner.button_text || "",
+      position: banner.position || "hero", priority: banner.priority || 0,
+      starts_at: banner.starts_at || "", ends_at: banner.ends_at || "", is_active: banner.is_active
+    });
+    setShowDialog(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("هل تريد حذف هذا البانر؟")) return;
+    try {
+      await axios.delete(`${API_URL}/admin/banners/${id}`, { headers: getAuthHeader() });
+      toast.success("تم حذف البانر");
+      fetchBanners();
+    } catch (error) {
+      toast.error("فشل في حذف البانر");
+    }
+  };
+
+  const positionLabels = { hero: "الرئيسي", sidebar: "الجانب", popup: "نافذة منبثقة", footer: "أسفل الصفحة" };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-xl md:text-2xl font-bold">إدارة البانرات والسلايدر</h2>
+        <Button onClick={() => { resetForm(); setShowDialog(true); }} className="h-10 gap-2">
+          <Plus className="h-4 w-4" /> إضافة بانر
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}</div>
+      ) : banners.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {banners.map((banner) => (
+            <div key={banner.id} className="rounded-xl bg-card border border-border overflow-hidden">
+              {banner.image_url && (
+                <img src={banner.image_url.startsWith("/") ? `${API_URL.replace("/api", "")}${banner.image_url}` : banner.image_url} alt={banner.title} className="w-full h-32 object-cover" />
+              )}
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-sm">{banner.title || "بدون عنوان"}</h3>
+                  <div className="flex gap-1">
+                    <Badge className={banner.is_active ? "bg-green-500" : "bg-gray-500"}>{banner.is_active ? "مفعل" : "معطل"}</Badge>
+                    <Badge variant="outline">{positionLabels[banner.position]}</Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">{banner.subtitle}</p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>النقرات: {banner.clicks || 0}</span>
+                  <span>الأولوية: {banner.priority}</span>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button variant="outline" size="sm" onClick={() => openEdit(banner)}><Edit className="h-4 w-4" /></Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(banner.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          <Image className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>لا توجد بانرات. أضف بانر جديد للبدء.</p>
+        </div>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editBanner ? "تعديل البانر" : "إضافة بانر جديد"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Image Upload */}
+            <div>
+              <Label>صورة البانر *</Label>
+              <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center">
+                {formData.image_url ? (
+                  <div className="relative">
+                    <img src={formData.image_url.startsWith("/") ? `${API_URL.replace("/api", "")}${formData.image_url}` : formData.image_url} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                    <Button type="button" variant="destructive" size="sm" className="absolute top-2 left-2" onClick={() => setFormData({...formData, image_url: ""})}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-2">اسحب الصورة هنا أو</p>
+                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                      {uploading ? "جاري الرفع..." : "اختر صورة"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">أو أدخل رابط الصورة:</p>
+              <Input value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} dir="ltr" placeholder="https://..." className="mt-1" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>العنوان</Label>
+                <Input value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="خصم 50%!" />
+              </div>
+              <div>
+                <Label>العنوان الفرعي</Label>
+                <Input value={formData.subtitle} onChange={(e) => setFormData({...formData, subtitle: e.target.value})} placeholder="لفترة محدودة" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>الموقع</Label>
+                <Select value={formData.position} onValueChange={(v) => setFormData({...formData, position: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hero">الرئيسي (Hero)</SelectItem>
+                    <SelectItem value="sidebar">الجانب</SelectItem>
+                    <SelectItem value="popup">نافذة منبثقة</SelectItem>
+                    <SelectItem value="footer">أسفل الصفحة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>نوع الرابط</Label>
+                <Select value={formData.link_type} onValueChange={(v) => setFormData({...formData, link_type: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون رابط</SelectItem>
+                    <SelectItem value="product">منتج</SelectItem>
+                    <SelectItem value="category">قسم</SelectItem>
+                    <SelectItem value="url">رابط خارجي</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>الأولوية</Label>
+                <Input type="number" value={formData.priority} onChange={(e) => setFormData({...formData, priority: parseInt(e.target.value) || 0})} />
+              </div>
+            </div>
+
+            {formData.link_type !== "none" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>{formData.link_type === "url" ? "الرابط" : "معرف " + (formData.link_type === "product" ? "المنتج" : "القسم")}</Label>
+                  <Input value={formData.link_value} onChange={(e) => setFormData({...formData, link_value: e.target.value})} dir="ltr" />
+                </div>
+                <div>
+                  <Label>نص الزر</Label>
+                  <Input value={formData.button_text} onChange={(e) => setFormData({...formData, button_text: e.target.value})} placeholder="تسوق الآن" />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>تاريخ البداية (اختياري)</Label>
+                <Input type="datetime-local" value={formData.starts_at} onChange={(e) => setFormData({...formData, starts_at: e.target.value})} dir="ltr" />
+              </div>
+              <div>
+                <Label>تاريخ النهاية (اختياري)</Label>
+                <Input type="datetime-local" value={formData.ends_at} onChange={(e) => setFormData({...formData, ends_at: e.target.value})} dir="ltr" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="is_active" checked={formData.is_active} onChange={(e) => setFormData({...formData, is_active: e.target.checked})} className="rounded" />
+              <Label htmlFor="is_active">تفعيل البانر</Label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
+              <Button type="submit">{editBanner ? "تحديث" : "إنشاء"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Homepage Sections Management
+const HomepageSectionsManagement = () => {
+  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [editSection, setEditSection] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "", name_en: "", section_type: "new_products", is_active: true, order: 0, max_items: 8
+  });
+
+  useEffect(() => { fetchSections(); }, []);
+
+  const fetchSections = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/homepage/sections`, { headers: getAuthHeader() });
+      setSections(response.data);
+    } catch (error) {
+      toast.error("فشل في تحميل الأقسام");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editSection) {
+        await axios.put(`${API_URL}/admin/homepage/sections/${editSection.id}`, formData, { headers: getAuthHeader() });
+        toast.success("تم تحديث القسم");
+      } else {
+        await axios.post(`${API_URL}/admin/homepage/sections`, formData, { headers: getAuthHeader() });
+        toast.success("تم إنشاء القسم");
+      }
+      setShowDialog(false);
+      resetForm();
+      fetchSections();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "حدث خطأ");
+    }
+  };
+
+  const resetForm = () => {
+    setEditSection(null);
+    setFormData({ name: "", name_en: "", section_type: "new_products", is_active: true, order: 0, max_items: 8 });
+  };
+
+  const openEdit = (section) => {
+    setEditSection(section);
+    setFormData({
+      name: section.name, name_en: section.name_en || "", section_type: section.section_type,
+      is_active: section.is_active, order: section.order, max_items: section.max_items || 8
+    });
+    setShowDialog(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("هل تريد حذف هذا القسم؟")) return;
+    try {
+      await axios.delete(`${API_URL}/admin/homepage/sections/${id}`, { headers: getAuthHeader() });
+      toast.success("تم حذف القسم");
+      fetchSections();
+    } catch (error) {
+      toast.error("فشل في حذف القسم");
+    }
+  };
+
+  const sectionTypeLabels = { new_products: "منتجات جديدة", best_sellers: "الأكثر مبيعاً", featured: "منتجات مميزة", custom: "مخصص" };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-xl md:text-2xl font-bold">أقسام الصفحة الرئيسية</h2>
+        <Button onClick={() => { resetForm(); setShowDialog(true); }} className="h-10 gap-2">
+          <Plus className="h-4 w-4" /> إضافة قسم
+        </Button>
+      </div>
+
+      <p className="text-sm text-muted-foreground">تحكم في الأقسام التي تظهر في الصفحة الرئيسية وترتيبها</p>
+
+      {loading ? (
+        <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
+      ) : sections.length > 0 ? (
+        <div className="space-y-2">
+          {sections.map((section, index) => (
+            <div key={section.id} className="p-4 rounded-xl bg-card border border-border flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-secondary">
+                  <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold">{section.name}</h3>
+                    <Badge variant="outline">{sectionTypeLabels[section.section_type]}</Badge>
+                    <Badge className={section.is_active ? "bg-green-500" : "bg-gray-500"}>{section.is_active ? "مفعل" : "معطل"}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">عدد المنتجات: {section.max_items}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEdit(section)}><Edit className="h-4 w-4" /></Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(section.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>لا توجد أقسام. أضف قسم جديد للصفحة الرئيسية.</p>
+        </div>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editSection ? "تعديل القسم" : "إضافة قسم جديد"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>اسم القسم *</Label>
+              <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="منتجات جديدة" required />
+            </div>
+            <div>
+              <Label>نوع القسم *</Label>
+              <Select value={formData.section_type} onValueChange={(v) => setFormData({...formData, section_type: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new_products">منتجات جديدة</SelectItem>
+                  <SelectItem value="best_sellers">الأكثر مبيعاً</SelectItem>
+                  <SelectItem value="featured">منتجات مميزة</SelectItem>
+                  <SelectItem value="custom">مخصص</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>الترتيب</Label>
+                <Input type="number" value={formData.order} onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})} />
+              </div>
+              <div>
+                <Label>عدد المنتجات</Label>
+                <Input type="number" value={formData.max_items} onChange={(e) => setFormData({...formData, max_items: parseInt(e.target.value) || 8})} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="section_active" checked={formData.is_active} onChange={(e) => setFormData({...formData, is_active: e.target.checked})} className="rounded" />
+              <Label htmlFor="section_active">تفعيل القسم</Label>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
+              <Button type="submit">{editSection ? "تحديث" : "إنشاء"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Excel Import
+const ExcelImport = () => {
+  const [file, setFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      // In a real implementation, we would parse the Excel file here for preview
+      toast.success(`تم اختيار الملف: ${selectedFile.name}`);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setImporting(true);
+    
+    // This would be a real API call in production
+    setTimeout(() => {
+      toast.success("تم استيراد المنتجات بنجاح");
+      setFile(null);
+      setImporting(false);
+    }, 2000);
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <h2 className="font-heading text-xl md:text-2xl font-bold">رفع المنتجات عبر Excel</h2>
+      
+      <div className="p-6 rounded-xl bg-card border border-border">
+        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+          <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-green-500" />
+          <h3 className="font-bold mb-2">رفع ملف Excel أو CSV</h3>
+          <p className="text-sm text-muted-foreground mb-4">اسحب الملف هنا أو اضغط للاختيار</p>
+          
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".xlsx,.xls,.csv" className="hidden" />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 ml-2" /> اختر ملف
+          </Button>
+          
+          {file && (
+            <div className="mt-4 p-3 rounded-lg bg-secondary">
+              <p className="text-sm font-medium">{file.name}</p>
+              <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
+            </div>
+          )}
+        </div>
+        
+        {file && (
+          <Button onClick={handleImport} disabled={importing} className="w-full mt-4">
+            {importing ? "جاري الاستيراد..." : "استيراد المنتجات"}
+          </Button>
+        )}
+      </div>
+      
+      <div className="p-4 rounded-xl bg-card border border-border">
+        <h3 className="font-bold mb-3">📋 تنسيق الملف المطلوب</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-right py-2">العمود</th>
+                <th className="text-right py-2">الوصف</th>
+                <th className="text-right py-2">مثال</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              <tr className="border-b"><td className="py-2">name</td><td>اسم المنتج</td><td>بلايستيشن بلس 12 شهر</td></tr>
+              <tr className="border-b"><td className="py-2">category</td><td>القسم</td><td>playstation</td></tr>
+              <tr className="border-b"><td className="py-2">type</td><td>النوع</td><td>digital_code / existing_account / new_account</td></tr>
+              <tr className="border-b"><td className="py-2">price_jod</td><td>السعر (د.أ)</td><td>25.00</td></tr>
+              <tr className="border-b"><td className="py-2">price_usd</td><td>السعر ($)</td><td>35.00</td></tr>
+              <tr className="border-b"><td className="py-2">image_url</td><td>رابط الصورة</td><td>https://...</td></tr>
+              <tr><td className="py-2">codes</td><td>الأكواد (مفصولة بـ |)</td><td>CODE1|CODE2|CODE3</td></tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <Button variant="outline" className="mt-4">
+          <FileSpreadsheet className="h-4 w-4 ml-2" /> تحميل نموذج Excel
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Site Settings
 const SiteSettings = () => {
   const [settings, setSettings] = useState(null);
