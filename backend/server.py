@@ -2628,12 +2628,6 @@ async def update_user_role(
     await log_audit(admin, "update_role", "user", user_id, {"old_role": old_role, "new_role": role}, request)
     
     return {"message": "تم تحديث دور المستخدم"}
-            "name": role_data["name"],
-            "level": role_data["level"],
-            "description": role_data.get("description", ""),
-            "permissions": ROLE_PERMISSIONS.get(role_id, [])
-        })
-    return roles_list
 
 @api_router.get("/admin/permissions")
 async def get_permissions(admin: dict = Depends(get_admin_user)):
