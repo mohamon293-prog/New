@@ -28,6 +28,7 @@ export {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+export { toast } from "sonner";
 
 // Icons
 export {
