@@ -3137,6 +3137,7 @@ export default function AdminDashboard() {
     if (path.includes("discounts")) return "أكواد الخصم";
     if (path.includes("notifications")) return "الإشعارات";
     if (path.includes("tickets")) return "الدعم الفني";
+    if (path.includes("telegram")) return "إشعارات Telegram";
     if (path.includes("settings")) return "إعدادات الموقع";
     return "لوحة التحكم";
   };
