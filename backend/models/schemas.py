@@ -44,7 +44,7 @@ class UserProfile(BaseModel):
     name: str
     phone: Optional[str] = None
     role: str
-    wallet_balance: float
+    wallet_balance: float = 0.0
     created_at: str
 
 
