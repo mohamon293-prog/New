@@ -74,10 +74,6 @@ api_router.include_router(admin_router)
 api_router.include_router(disputes_router)
 api_router.include_router(discounts_router)
 api_router.include_router(cms_router)
-api_router.include_router(orders_router)
-api_router.include_router(admin_router)
-api_router.include_router(disputes_router)
-api_router.include_router(discounts_router)
 
 
 # ==================== WALLET ENDPOINTS ====================
