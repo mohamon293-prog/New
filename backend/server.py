@@ -18,6 +18,7 @@ import hashlib
 import secrets
 import shutil
 import aiofiles
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 UPLOAD_DIR = ROOT_DIR / "uploads"
@@ -41,6 +42,10 @@ JWT_EXPIRATION_HOURS = 24
 # Encryption key for product codes
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
 fernet = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
+
+# Telegram Configuration
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
 
 # Create the main app
 app = FastAPI(title="Gamelo API", description="Digital Game Codes Marketplace API")
