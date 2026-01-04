@@ -178,10 +178,37 @@
 ---
 
 ## الملفات الرئيسية
-- `/app/backend/server.py` - Backend كامل (~2800 سطر)
-- `/app/frontend/src/pages/admin/AdminDashboard.js` - لوحة التحكم (~3400 سطر)
-- `/app/uploads/` - ملفات الرفع
-- `/app/tests/` - ملفات الاختبارات
+
+### Backend (مُعاد هيكلته)
+```
+/app/backend/
+├── server.py           # Main entry point (~700 lines)
+├── routes/
+│   ├── auth.py         # Authentication
+│   ├── products.py     # Products & Categories
+│   ├── orders.py       # Orders
+│   ├── admin.py        # Admin, Analytics, Roles
+│   ├── disputes.py     # Disputes
+│   └── discounts.py    # Coupons
+├── models/
+│   ├── schemas.py      # Pydantic Models
+│   └── constants.py    # Roles, Permissions, etc.
+├── utils/
+│   └── database.py     # DB connection & auth
+└── uploads/            # Uploaded files
+```
+
+### Frontend
+```
+/app/frontend/src/
+├── pages/admin/
+│   └── AdminDashboard.js    # Main admin (~3400 lines)
+├── components/admin/
+│   ├── DashboardStats.jsx   # Extracted component
+│   ├── shared.js            # Shared imports
+│   └── index.js             # Exports
+└── ...
+```
 
 
 
