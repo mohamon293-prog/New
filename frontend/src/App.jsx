@@ -1,25 +1,25 @@
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { CartProvider } from "./context/CartContext";
-import { Layout } from "./components/layout/Layout";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { CartProvider } from "./context/CartContext.jsx";
+import { Layout } from "./components/layout/Layout.jsx";
 
 // Pages
-import HomePage from "./pages/HomePage";
-import ProductsPage from "./pages/ProductsPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import CartPage from "./pages/CartPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import OrdersPage from "./pages/OrdersPage";
-import WalletPage from "./pages/WalletPage";
-import ProfilePage from "./pages/ProfilePage";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import TermsPage from "./pages/legal/TermsPage";
-import PrivacyPage from "./pages/legal/PrivacyPage";
-import RefundPage from "./pages/legal/RefundPage";
-import FAQPage from "./pages/FAQPage";
-import HowToBuyPage from "./pages/HowToBuyPage";
+import HomePage from "./pages/HomePage.jsx";
+import ProductsPage from "./pages/ProductsPage.jsx";
+import ProductDetailPage from "./pages/ProductDetailPage.jsx";
+import CartPage from "./pages/CartPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
+import OrdersPage from "./pages/OrdersPage.jsx";
+import WalletPage from "./pages/WalletPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import TermsPage from "./pages/legal/TermsPage.jsx";
+import PrivacyPage from "./pages/legal/PrivacyPage.jsx";
+import RefundPage from "./pages/legal/RefundPage.jsx";
+import FAQPage from "./pages/FAQPage.jsx";
+import HowToBuyPage from "./pages/HowToBuyPage.jsx";
 
 import "./App.css";
 
