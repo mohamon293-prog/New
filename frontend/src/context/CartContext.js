@@ -31,30 +31,55 @@ export const CartProvider = ({ children }) => {
 
   const addItem = (product, quantity = 1) => {
     setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
+      // For account products, always add as new item (don't merge)
+      const isAccountProduct = product.product_type && product.product_type !== "digital_code";
+      
+      if (!isAccountProduct) {
+        const existing = prev.find((item) => 
+          item.id === product.id && 
+          (!product.selectedVariant || item.selectedVariant?.id === product.selectedVariant?.id)
         );
+        if (existing) {
+          return prev.map((item) =>
+            item.id === product.id && 
+            (!product.selectedVariant || item.selectedVariant?.id === product.selectedVariant?.id)
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          );
+        }
       }
-      return [...prev, { ...product, quantity }];
+      
+      // Add new item with unique cart ID
+      const cartItem = {
+        ...product,
+        quantity,
+        cartId: `${product.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+      
+      return [...prev, cartItem];
     });
   };
 
-  const removeItem = (productId) => {
-    setItems((prev) => prev.filter((item) => item.id !== productId));
+  const removeItem = (cartId) => {
+    setItems((prev) => prev.filter((item) => (item.cartId || item.id) !== cartId));
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (cartId, quantity) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(cartId);
       return;
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
+        (item.cartId || item.id) === cartId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const updateAccountInfo = (cartId, accountInfo) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        (item.cartId || item.id) === cartId ? { ...item, accountInfo } : item
       )
     );
   };
@@ -65,7 +90,13 @@ export const CartProvider = ({ children }) => {
 
   const getTotal = () => {
     return items.reduce((total, item) => {
-      const price = currency === "JOD" ? item.price_jod : item.price_usd;
+      // Use variant price if selected
+      let price;
+      if (item.selectedVariant) {
+        price = currency === "JOD" ? item.selectedVariant.price_jod : item.selectedVariant.price_usd;
+      } else {
+        price = currency === "JOD" ? item.price_jod : item.price_usd;
+      }
       return total + price * item.quantity;
     }, 0);
   };
@@ -78,17 +109,38 @@ export const CartProvider = ({ children }) => {
     setCurrency((prev) => (prev === "JOD" ? "USD" : "JOD"));
   };
 
+  // Validate cart items (check if account products have required info)
+  const validateCart = () => {
+    for (const item of items) {
+      if (item.product_type && item.product_type !== "digital_code") {
+        const info = item.accountInfo || {};
+        if (item.product_type === "existing_account") {
+          if (!info.email || !info.password) {
+            return { valid: false, error: `يرجى إدخال بيانات الحساب لـ "${item.name}"` };
+          }
+        } else if (item.product_type === "new_account") {
+          if (!info.phone && !info.email) {
+            return { valid: false, error: `يرجى إدخال رقم الهاتف أو البريد لـ "${item.name}"` };
+          }
+        }
+      }
+    }
+    return { valid: true };
+  };
+
   const value = {
     items,
     currency,
     addItem,
     removeItem,
     updateQuantity,
+    updateAccountInfo,
     clearCart,
     getTotal,
     getItemCount,
     toggleCurrency,
     setCurrency,
+    validateCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
