@@ -1549,7 +1549,7 @@ async def create_admin():
     print(f"✅ تم إنشاء الحساب!")
     print(f"البريد: {admin_email}")
     print(f"كلمة المرور: {admin_password}")
-
+a
 asyncio.run(create_admin())
 ADMINSCRIPT
 
