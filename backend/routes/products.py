@@ -73,12 +73,13 @@ async def get_product(product_id: str):
     if not product:
         raise HTTPException(status_code=404, detail="المنتج غير موجود")
     
-    # Get stock count
+    # Get stock count (available codes)
     stock = await db.codes.count_documents({
         "product_id": product_id,
         "is_sold": False
     })
     product["stock_count"] = stock
+    product["available_codes"] = stock
     
     # Get category name
     category = await db.categories.find_one({"id": product.get("category_id")})
