@@ -222,8 +222,8 @@ export default function OrdersPage() {
                     <div className="text-left ltr-nums">
                       {formatPrice(
                         currency === "JOD"
-                          ? item.unit_price_jod * item.quantity
-                          : item.unit_price_usd * item.quantity,
+                          ? (item.unit_price_jod || item.price_jod) * item.quantity
+                          : (item.unit_price_usd || item.price_usd) * item.quantity,
                         currency
                       )}
                     </div>
