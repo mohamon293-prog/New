@@ -76,9 +76,14 @@ async def credit_wallet(
     
     now = datetime.now(timezone.utc).isoformat()
     
+    # Update both wallet_balance fields
     await db.users.update_one(
         {"id": request.user_id},
-        {"$inc": {"wallet_balance": request.amount}}
+        {"$inc": {
+            "wallet_balance": request.amount,
+            "wallet_balance_jod": request.amount,
+            "wallet_balance_usd": request.amount * 1.41  # Approximate conversion
+        }}
     )
     
     transaction_id = str(uuid.uuid4())
