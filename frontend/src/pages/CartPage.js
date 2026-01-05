@@ -31,6 +31,10 @@ import {
 // Helper to get the correct image URL
 const getImageUrl = (imageUrl) => {
   if (!imageUrl) return "/placeholder-product.png";
+  if (imageUrl.startsWith("/uploads/")) {
+    // Use API endpoint for uploaded files
+    return `${API_URL}${imageUrl}`;
+  }
   if (imageUrl.startsWith("/")) {
     return `${API_URL.replace("/api", "")}${imageUrl}`;
   }
