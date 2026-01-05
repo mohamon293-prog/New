@@ -32,8 +32,13 @@ class UserResponse(BaseModel):
     name: str
     phone: Optional[str] = None
     role: str
+    role_level: int = 1
+    permissions: List[str] = []
     is_active: bool
     is_approved: bool
+    wallet_balance: float = 0.0
+    wallet_balance_jod: float = 0.0
+    wallet_balance_usd: float = 0.0
     created_at: str
 
 
@@ -44,7 +49,11 @@ class UserProfile(BaseModel):
     name: str
     phone: Optional[str] = None
     role: str
+    role_level: int = 1
+    permissions: List[str] = []
     wallet_balance: float = 0.0
+    wallet_balance_jod: float = 0.0
+    wallet_balance_usd: float = 0.0
     created_at: str
 
 
