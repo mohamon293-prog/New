@@ -358,7 +358,7 @@ const ProductsManagement = () => {
                   <div className="mt-2 flex gap-4 items-start">
                     {productForm.image_url ? (
                       <div className="relative">
-                        <img src={productForm.image_url.startsWith("/") ? `${API_URL.replace("/api", "")}${productForm.image_url}` : productForm.image_url} alt="Preview" className="w-24 h-24 rounded-lg object-cover" />
+                        <img src={productForm.image_url.startsWith("/uploads/") ? `${API_URL}${productForm.image_url}` : productForm.image_url.startsWith("/") ? `${API_URL.replace("/api", "")}${productForm.image_url}` : productForm.image_url} alt="Preview" className="w-24 h-24 rounded-lg object-cover" />
                         <Button type="button" variant="destructive" size="sm" className="absolute -top-2 -right-2 h-6 w-6 p-0" onClick={() => setProductForm({...productForm, image_url: ""})}>
                           <X className="h-3 w-3" />
                         </Button>
