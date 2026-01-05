@@ -697,6 +697,12 @@ async def root():
     return {"message": "مرحباً بك في Gamelo API", "version": "2.0"}
 
 
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "message": "Gamelo API is running"}
+
+
 # Add CORS middleware (must be before static files mount)
 app.add_middleware(
     CORSMiddleware,
