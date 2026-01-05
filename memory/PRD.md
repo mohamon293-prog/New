@@ -96,7 +96,7 @@
 
 ## 🔵 مهام تقنية
 
-### إعادة الهيكلة (Refactoring) ✅ (مكتمل جزئياً 2025-01-04)
+### إعادة الهيكلة (Refactoring) ✅ (مكتمل بالكامل 2025-01-05)
 
 **Backend - مكتمل:**
 - [x] تقسيم `server.py` (~3100 سطر) إلى:
@@ -111,10 +111,32 @@
   - `/app/backend/models/constants.py` - الثوابت والأدوار
   - `/app/backend/utils/database.py` - اتصال قاعدة البيانات
 
-**Frontend - جزئي:**
+**Frontend - مكتمل ✅ (2025-01-05):**
 - [x] إنشاء `/app/frontend/src/components/admin/`
-- [x] استخراج `DashboardStats` كمكون منفصل
-- [ ] استخراج باقي المكونات (UsersManagement, ProductsManagement, etc.)
+- [x] تقسيم `AdminDashboard.js` (~3600 سطر) إلى 22 مكون:
+  - `AdminSidebar.jsx` - القائمة الجانبية
+  - `DashboardStats.jsx` - إحصائيات لوحة التحكم
+  - `ProductsManagement.jsx` - إدارة المنتجات
+  - `CategoriesManagement.jsx` - إدارة الأقسام
+  - `OrdersManagement.jsx` - إدارة الطلبات
+  - `UsersManagement.jsx` - إدارة المستخدمين
+  - `WalletManagement.jsx` - إدارة المحافظ
+  - `DiscountsManagement.jsx` - إدارة أكواد الخصم
+  - `NotificationsManagement.jsx` - الإشعارات
+  - `TicketsManagement.jsx` - الدعم الفني
+  - `DisputesManagement.jsx` - إدارة النزاعات
+  - `BannersManagement.jsx` - إدارة البانرات
+  - `HomepageSectionsManagement.jsx` - أقسام الرئيسية
+  - `AnalyticsDashboard.jsx` - لوحة التحليلات
+  - `AuditLogs.jsx` - سجل النشاطات
+  - `SiteSettings.jsx` - إعدادات الموقع
+  - `TelegramSettings.jsx` - إعدادات Telegram
+  - `RolesManagement.jsx` - إدارة الأدوار
+  - `CMSManagement.jsx` - إدارة المحتوى
+  - `ExcelImport.jsx` - رفع Excel
+  - `shared.js` - المكتبات المشتركة
+  - `index.js` - ملف التصدير المركزي
+- [x] ملف `AdminDashboard.js` أصبح ~150 سطر فقط (routing)
 
 ---
 
