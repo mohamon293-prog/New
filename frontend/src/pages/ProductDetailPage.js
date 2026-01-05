@@ -29,6 +29,15 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+// Helper to get the correct image URL
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return "/placeholder-product.png";
+  if (imageUrl.startsWith("/")) {
+    return `${API_URL.replace("/api", "")}${imageUrl}`;
+  }
+  return imageUrl;
+};
+
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -217,7 +226,7 @@ export default function ProductDetailPage() {
           {/* Product Image */}
           <div className="space-y-4">
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-card border border-border">
-              <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+              <img src={getImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-cover" onError={(e) => { e.target.src = "/placeholder-product.png"; }} />
               <div className="absolute top-4 right-4 flex flex-col gap-2">
                 {discount > 0 && <Badge className="bg-destructive">-{discount}%</Badge>}
                 {product.is_featured && (
