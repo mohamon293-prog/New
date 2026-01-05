@@ -198,7 +198,8 @@ async def reveal_order_codes(order_id: str, user: dict = Depends(get_current_use
     
     revealed_codes = []
     for item in order.get("items", []):
-        code_ids = item.get("codes", [])
+        # Support both 'codes' and 'code_ids' fields
+        code_ids = item.get("codes", []) or item.get("code_ids", [])
         if code_ids:
             codes = await db.codes.find({"id": {"$in": code_ids}}).to_list(100)
             for code in codes:
@@ -211,7 +212,7 @@ async def reveal_order_codes(order_id: str, user: dict = Depends(get_current_use
                 except:
                     revealed_codes.append({
                         "product_name": item["product_name"],
-                        "code": "خطأ في فك التشفير"
+                        "code": code.get("code_value", "خطأ في فك التشفير")
                     })
     
     # Mark as revealed
