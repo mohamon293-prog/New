@@ -2,20 +2,14 @@
 
 ###############################################
 #                                             #
-#   🎮 GAMELO - سكريبت التثبيت الشامل 🎮      #
+#   🎮 GAMELO - التثبيت التلقائي الكامل 🎮    #
 #      Hostinger VPS - Ubuntu 22.04           #
-#                                             #
-#   يحل جميع المشاكل تلقائياً:                #
-#   ✅ نفاد الذاكرة (Swap)                    #
-#   ✅ تعارض المكتبات (npm)                   #
-#   ✅ المكتبات الناقصة (httpx)               #
-#   ✅ إعدادات الخدمات                        #
+#              الإصدار 3.0                    #
 #                                             #
 ###############################################
 
 set -e
 
-# ألوان
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
@@ -27,12 +21,11 @@ echo_blue() { echo -e "${BLUE}$1${NC}"; }
 echo_yellow() { echo -e "${YELLOW}$1${NC}"; }
 echo_red() { echo -e "${RED}$1${NC}"; }
 
-# شعار
 clear
 echo ""
 echo_blue "╔══════════════════════════════════════════════════════╗"
 echo_blue "║                                                      ║"
-echo_blue "║         🎮 GAMELO AUTO INSTALLER v2.0 🎮             ║"
+echo_blue "║         🎮 GAMELO AUTO INSTALLER v3.0 🎮             ║"
 echo_blue "║            Hostinger VPS Edition                     ║"
 echo_blue "║                                                      ║"
 echo_blue "╚══════════════════════════════════════════════════════╝"
@@ -54,7 +47,6 @@ echo ""
 read -p "🌐 أدخل الدومين (مثال: gamelo.org): " DOMAIN
 read -p "📧 أدخل البريد الإلكتروني: " EMAIL
 
-# تنظيف الدومين
 DOMAIN=$(echo "$DOMAIN" | sed 's|https://||g' | sed 's|http://||g' | sed 's|/||g' | sed 's|www.||g')
 
 echo ""
@@ -76,10 +68,8 @@ echo_blue "              🚀 بدء التثبيت الشامل...             
 echo_blue "══════════════════════════════════════════════════════"
 echo ""
 
-# ========================================
 # 1. حذف التثبيت القديم
-# ========================================
-echo_yellow "[1/14] 🗑️ حذف التثبيت القديم..."
+echo_yellow "[1/15] 🗑️ حذف التثبيت القديم..."
 supervisorctl stop gamelo 2>/dev/null || true
 rm -rf /var/www/gamelo
 rm -f /etc/supervisor/conf.d/gamelo.conf
@@ -88,107 +78,87 @@ rm -f /etc/nginx/sites-available/gamelo
 systemctl restart nginx 2>/dev/null || true
 echo_green "✅ تم"
 
-# ========================================
 # 2. تحديث النظام
-# ========================================
-echo_yellow "[2/14] 📦 تحديث النظام..."
+echo_yellow "[2/15] 📦 تحديث النظام..."
 apt update -y > /dev/null 2>&1
 apt upgrade -y > /dev/null 2>&1
 apt install -y curl wget git build-essential software-properties-common ufw nano htop > /dev/null 2>&1
 echo_green "✅ تم"
 
-# ========================================
-# 3. إضافة Swap Memory (مهم جداً!)
-# ========================================
-echo_yellow "[3/14] 💾 إضافة Swap Memory (4GB)..."
+# 3. إضافة Swap
+echo_yellow "[3/15] 💾 إضافة Swap Memory (4GB)..."
 if [ ! -f /swapfile ]; then
     fallocate -l 4G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=4096 status=none
     chmod 600 /swapfile
     mkswap /swapfile > /dev/null 2>&1
     swapon /swapfile 2>/dev/null || true
     grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    echo_green "✅ تم إضافة 4GB Swap"
-else
-    swapon /swapfile 2>/dev/null || true
-    echo_green "✅ Swap موجود مسبقاً"
 fi
+swapon /swapfile 2>/dev/null || true
+echo_green "✅ تم"
 
-# ========================================
-# 4. تثبيت Python 3.11
-# ========================================
-echo_yellow "[4/14] 🐍 تثبيت Python 3.11..."
+# 4. Python 3.11
+echo_yellow "[4/15] 🐍 تثبيت Python 3.11..."
 add-apt-repository ppa:deadsnakes/ppa -y > /dev/null 2>&1
 apt update -y > /dev/null 2>&1
 apt install -y python3.11 python3.11-venv python3.11-dev python3-pip > /dev/null 2>&1
-echo_green "✅ تم - $(python3.11 --version)"
+echo_green "✅ تم - $(python3.11 --version 2>/dev/null || echo 'Python 3.11')"
 
-# ========================================
-# 5. تثبيت Node.js 20
-# ========================================
-echo_yellow "[5/14] 📗 تثبيت Node.js 20..."
+# 5. Node.js 20
+echo_yellow "[5/15] 📗 تثبيت Node.js 20..."
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null 2>&1
 apt install -y nodejs > /dev/null 2>&1
-echo_green "✅ تم - Node $(node --version)"
+echo_green "✅ تم - Node $(node --version 2>/dev/null || echo 'v20')"
 
-# ========================================
-# 6. تثبيت MongoDB 7
-# ========================================
-echo_yellow "[6/14] 🍃 تثبيت MongoDB 7..."
+# 6. MongoDB 7
+echo_yellow "[6/15] 🍃 تثبيت MongoDB 7..."
 if ! command -v mongod &> /dev/null; then
     curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor 2>/dev/null
     echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list > /dev/null
     apt update -y > /dev/null 2>&1
     apt install -y mongodb-org > /dev/null 2>&1
 fi
-systemctl start mongod
+systemctl start mongod 2>/dev/null || true
 systemctl enable mongod > /dev/null 2>&1
 echo_green "✅ تم"
 
-# ========================================
-# 7. تثبيت Nginx و Supervisor و Certbot
-# ========================================
-echo_yellow "[7/14] 🌐 تثبيت Nginx و Supervisor و Certbot..."
+# 7. Nginx و Supervisor
+echo_yellow "[7/15] 🌐 تثبيت Nginx و Supervisor..."
 apt install -y nginx supervisor certbot python3-certbot-nginx > /dev/null 2>&1
-systemctl start nginx
+systemctl start nginx 2>/dev/null || true
 systemctl enable nginx > /dev/null 2>&1
-systemctl start supervisor
+systemctl start supervisor 2>/dev/null || true
 systemctl enable supervisor > /dev/null 2>&1
 echo_green "✅ تم"
 
-# ========================================
-# 8. تحميل المشروع من GitHub
-# ========================================
-echo_yellow "[8/14] 📥 تحميل المشروع من GitHub..."
+# 8. تحميل المشروع
+echo_yellow "[8/15] 📥 تحميل المشروع من GitHub..."
 mkdir -p /var/www/gamelo
 cd /var/www/gamelo
 git clone https://github.com/mohamon293-prog/New.git . > /dev/null 2>&1 || {
-    echo_red "❌ فشل تحميل المشروع. تأكد أن الـ Repo عام (Public)"
+    echo_red "❌ فشل تحميل المشروع"
+    echo_yellow "تأكد أن الـ Repository عام (Public)"
+    echo_yellow "اذهب إلى: https://github.com/mohamon293-prog/New/settings"
+    echo_yellow "ثم Danger Zone > Change visibility > Public"
     exit 1
 }
 echo_green "✅ تم"
 
-# ========================================
 # 9. إعداد Backend
-# ========================================
-echo_yellow "[9/14] ⚙️ إعداد Backend..."
+echo_yellow "[9/15] ⚙️ إعداد Backend..."
 cd /var/www/gamelo/backend
 
-# إنشاء البيئة الافتراضية
 python3.11 -m venv venv
 source venv/bin/activate
 
-# تحديث pip وتثبيت المكتبات
 pip install --upgrade pip > /dev/null 2>&1
 pip install -r requirements.txt > /dev/null 2>&1
-
-# تثبيت المكتبات الإضافية المهمة
-pip install httpx aiohttp openpyxl Pillow python-multipart > /dev/null 2>&1
+pip install httpx aiohttp > /dev/null 2>&1
 
 # توليد المفاتيح
 JWT_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "")
 
-# إنشاء ملف .env
 cat > .env << EOF
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=gamelo_db
@@ -198,46 +168,30 @@ JWT_EXPIRATION_HOURS=24
 FERNET_KEY=$FERNET_KEY
 EOF
 
-# إنشاء مجلدات الرفع
-mkdir -p uploads/products uploads/banners uploads/categories uploads/images
+mkdir -p uploads/products uploads/banners uploads/categories
 chmod -R 755 uploads
-
 deactivate
 echo_green "✅ تم"
 
-# ========================================
 # 10. إعداد Frontend
-# ========================================
-echo_yellow "[10/14] 🎨 إعداد Frontend (قد يستغرق 5-10 دقائق)..."
+echo_yellow "[10/15] 🎨 إعداد Frontend (قد يستغرق 3-5 دقائق)..."
 cd /var/www/gamelo/frontend
 
-# إنشاء ملف .env
 cat > .env << EOF
 REACT_APP_BACKEND_URL=http://$DOMAIN
 EOF
 
-# حذف node_modules القديم
-rm -rf node_modules package-lock.json
+npm install > /dev/null 2>&1
+npm run build > /dev/null 2>&1
 
-# تثبيت المكتبات مع حل مشكلة التعارض
-npm install --legacy-peer-deps > /dev/null 2>&1 || npm install --legacy-peer-deps --force > /dev/null 2>&1
-
-# بناء التطبيق
-npm run build > /dev/null 2>&1 || {
-    echo_yellow "⚠️ إعادة المحاولة..."
-    npm run build --legacy-peer-deps > /dev/null 2>&1
-}
-
-if [ ! -d "build" ]; then
+if [ ! -f "build/index.html" ]; then
     echo_red "❌ فشل بناء Frontend"
     exit 1
 fi
 echo_green "✅ تم"
 
-# ========================================
-# 11. إعداد Supervisor
-# ========================================
-echo_yellow "[11/14] 🔄 إعداد Supervisor..."
+# 11. Supervisor
+echo_yellow "[11/15] 🔄 إعداد Supervisor..."
 mkdir -p /var/log/gamelo
 
 cat > /etc/supervisor/conf.d/gamelo.conf << 'EOF'
@@ -249,27 +203,18 @@ autostart=true
 autorestart=true
 stderr_logfile=/var/log/gamelo/error.log
 stdout_logfile=/var/log/gamelo/access.log
-environment=PATH="/var/www/gamelo/backend/venv/bin"
 EOF
 
-# تعيين الصلاحيات
 chown -R www-data:www-data /var/www/gamelo
 chown -R www-data:www-data /var/log/gamelo
-
-# تحديث وتشغيل
 supervisorctl reread > /dev/null 2>&1
 supervisorctl update > /dev/null 2>&1
 supervisorctl restart gamelo > /dev/null 2>&1 || supervisorctl start gamelo > /dev/null 2>&1
-
-# انتظار بدء الخدمة
 sleep 3
 echo_green "✅ تم"
 
-# ========================================
-# 12. إعداد Nginx
-# ========================================
-echo_yellow "[12/14] 🌍 إعداد Nginx..."
-
+# 12. Nginx
+echo_yellow "[12/15] 🌍 إعداد Nginx..."
 cat > /etc/nginx/sites-available/gamelo << EOF
 server {
     listen 80;
@@ -279,7 +224,6 @@ server {
     index index.html;
     client_max_body_size 100M;
     
-    # API Backend
     location /api/ {
         proxy_pass http://127.0.0.1:8001/api/;
         proxy_http_version 1.1;
@@ -291,160 +235,114 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
         proxy_read_timeout 300;
-        proxy_connect_timeout 300;
-        proxy_send_timeout 300;
     }
     
-    # Uploads
     location /uploads/ {
         alias /var/www/gamelo/backend/uploads/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
     }
     
-    # Frontend (React Router)
     location / {
         try_files \$uri \$uri/ /index.html;
     }
-    
-    # Gzip
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 }
 EOF
 
-# تفعيل الموقع
 ln -sf /etc/nginx/sites-available/gamelo /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
-
-# اختبار وإعادة تشغيل
-nginx -t > /dev/null 2>&1 && systemctl restart nginx
+nginx -t > /dev/null 2>&1
+systemctl restart nginx
 echo_green "✅ تم"
 
-# ========================================
-# 13. Firewall و SSL
-# ========================================
-echo_yellow "[13/14] 🔒 إعداد Firewall و SSL..."
-
-# Firewall
+# 13. Firewall
+echo_yellow "[13/15] 🔥 إعداد Firewall..."
 ufw allow ssh > /dev/null 2>&1
 ufw allow 'Nginx Full' > /dev/null 2>&1
 ufw --force enable > /dev/null 2>&1
+echo_green "✅ تم"
 
-# محاولة الحصول على SSL (قد يفشل بسبب Rate Limit)
+# 14. SSL (اختياري)
+echo_yellow "[14/15] 🔒 محاولة الحصول على SSL..."
 certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $EMAIL > /dev/null 2>&1 && {
-    # تحديث Frontend لاستخدام HTTPS
     cat > /var/www/gamelo/frontend/.env << EOF
 REACT_APP_BACKEND_URL=https://$DOMAIN
 EOF
     cd /var/www/gamelo/frontend
     npm run build > /dev/null 2>&1
-    echo_green "✅ تم تفعيل SSL (HTTPS)"
+    echo_green "✅ تم تفعيل HTTPS"
 } || {
-    echo_yellow "⚠️ SSL غير متاح حالياً (Rate Limit) - الموقع يعمل على HTTP"
+    echo_yellow "⚠️ SSL غير متاح - الموقع يعمل على HTTP"
 }
 
-# ========================================
-# 14. إنشاء حساب المسؤول والأقسام
-# ========================================
-echo_yellow "[14/14] 👤 إنشاء حساب المسؤول والأقسام..."
+# 15. إنشاء المسؤول
+echo_yellow "[15/15] 👤 إنشاء حساب المسؤول..."
 cd /var/www/gamelo/backend
 source venv/bin/activate
 
 python3 << 'PYEOF'
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
-import bcrypt
-import uuid
+import bcrypt, uuid
 from datetime import datetime, timezone
 
-async def setup_database():
+async def setup():
     try:
         client = AsyncIOMotorClient("mongodb://localhost:27017")
         db = client.gamelo_db
         now = datetime.now(timezone.utc).isoformat()
         
-        # إنشاء المسؤول
-        existing_admin = await db.users.find_one({"email": "admin@gamelo.com"})
-        if not existing_admin:
-            password_hash = bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode()
-            admin_doc = {
+        # المسؤول
+        if not await db.users.find_one({"email": "admin@gamelo.com"}):
+            await db.users.insert_one({
                 "id": str(uuid.uuid4()),
                 "email": "admin@gamelo.com",
-                "password_hash": password_hash,
-                "name": "مدير النظام",
-                "phone": "",
-                "role": "admin",
-                "role_level": 100,
-                "permissions": [],
-                "is_active": True,
-                "is_approved": True,
-                "wallet_balance": 0.0,
-                "wallet_balance_jod": 0.0,
-                "wallet_balance_usd": 0.0,
-                "created_at": now,
-                "updated_at": now
-            }
-            await db.users.insert_one(admin_doc)
-            print("✅ تم إنشاء حساب المسؤول")
-        else:
-            print("✅ حساب المسؤول موجود مسبقاً")
+                "password_hash": bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode(),
+                "name": "مدير النظام", "phone": "", "role": "admin", "role_level": 100,
+                "permissions": [], "is_active": True, "is_approved": True,
+                "wallet_balance": 0.0, "wallet_balance_jod": 0.0, "wallet_balance_usd": 0.0,
+                "created_at": now, "updated_at": now
+            })
         
-        # إنشاء الأقسام
-        categories = [
-            {"id": "playstation", "name": "بلايستيشن", "name_en": "PlayStation", "slug": "playstation", "order": 1},
-            {"id": "xbox", "name": "إكس بوكس", "name_en": "Xbox", "slug": "xbox", "order": 2},
-            {"id": "steam", "name": "ستيم", "name_en": "Steam", "slug": "steam", "order": 3},
-            {"id": "nintendo", "name": "نينتندو", "name_en": "Nintendo", "slug": "nintendo", "order": 4},
-            {"id": "mobile", "name": "ألعاب الجوال", "name_en": "Mobile Games", "slug": "mobile", "order": 5},
-            {"id": "other", "name": "أخرى", "name_en": "Other", "slug": "other", "order": 6},
-        ]
-        
-        for cat in categories:
-            existing = await db.categories.find_one({"id": cat["id"]})
-            if not existing:
-                cat["is_active"] = True
-                cat["created_at"] = now
-                cat["updated_at"] = now
-                await db.categories.insert_one(cat)
-        
-        print("✅ تم إنشاء الأقسام")
-        
+        # الأقسام
+        for cid, name, name_en, order in [
+            ("playstation", "بلايستيشن", "PlayStation", 1),
+            ("xbox", "إكس بوكس", "Xbox", 2),
+            ("steam", "ستيم", "Steam", 3),
+            ("nintendo", "نينتندو", "Nintendo", 4),
+            ("mobile", "ألعاب الجوال", "Mobile", 5),
+            ("other", "أخرى", "Other", 6)
+        ]:
+            if not await db.categories.find_one({"id": cid}):
+                await db.categories.insert_one({
+                    "id": cid, "name": name, "name_en": name_en, "slug": cid,
+                    "order": order, "is_active": True, "created_at": now, "updated_at": now
+                })
+        print("OK")
     except Exception as e:
-        print(f"❌ خطأ: {e}")
+        print(f"Error: {e}")
 
-asyncio.run(setup_database())
+asyncio.run(setup())
 PYEOF
 
 deactivate
+echo_green "✅ تم"
 
-# ========================================
 # التحقق النهائي
-# ========================================
 echo ""
 echo_blue "══════════════════════════════════════════════════════"
 echo_blue "                   🔍 التحقق النهائي                  "
 echo_blue "══════════════════════════════════════════════════════"
 echo ""
 
-# التحقق من الخدمات
-BACKEND_STATUS=$(supervisorctl status gamelo 2>/dev/null | grep -c "RUNNING" || echo "0")
-NGINX_STATUS=$(systemctl is-active nginx 2>/dev/null || echo "inactive")
-MONGO_STATUS=$(systemctl is-active mongod 2>/dev/null || echo "inactive")
+BACKEND_OK=$(supervisorctl status gamelo 2>/dev/null | grep -c "RUNNING" || echo "0")
+NGINX_OK=$(systemctl is-active nginx 2>/dev/null)
+MONGO_OK=$(systemctl is-active mongod 2>/dev/null)
+API_OK=$(curl -s http://localhost:8001/api/categories 2>/dev/null | grep -c "playstation" || echo "0")
 
-# التحقق من API
-API_CHECK=$(curl -s http://localhost:8001/api/health 2>/dev/null | grep -c "healthy" || echo "0")
+echo "  MongoDB:  $([ "$MONGO_OK" = "active" ] && echo '✅ يعمل' || echo '❌ متوقف')"
+echo "  Backend:  $([ "$BACKEND_OK" = "1" ] && echo '✅ يعمل' || echo '❌ متوقف')"
+echo "  Nginx:    $([ "$NGINX_OK" = "active" ] && echo '✅ يعمل' || echo '❌ متوقف')"
+echo "  API:      $([ "$API_OK" -gt "0" ] && echo '✅ يعمل' || echo '⚠️ تحقق يدوياً')"
 
-echo "Backend (Supervisor): $([ "$BACKEND_STATUS" = "1" ] && echo '✅ يعمل' || echo '❌ متوقف')"
-echo "Nginx: $([ "$NGINX_STATUS" = "active" ] && echo '✅ يعمل' || echo '❌ متوقف')"
-echo "MongoDB: $([ "$MONGO_STATUS" = "active" ] && echo '✅ يعمل' || echo '❌ متوقف')"
-echo "API Health: $([ "$API_CHECK" = "1" ] && echo '✅ يعمل' || echo '⚠️ تحقق يدوياً')"
-
-# ========================================
-# النتيجة النهائية
-# ========================================
 echo ""
 echo_green "╔══════════════════════════════════════════════════════════════╗"
 echo_green "║                                                              ║"
@@ -458,17 +356,7 @@ echo_green "║   👤 بيانات تسجيل الدخول:                    
 echo_green "║      📧 البريد: admin@gamelo.com                             ║"
 echo_green "║      🔑 كلمة المرور: admin123                                ║"
 echo_green "║                                                              ║"
-echo_green "║   ⚠️  مهم: غيّر كلمة المرور فوراً بعد تسجيل الدخول!          ║"
+echo_green "║   ⚠️  مهم: غيّر كلمة المرور فوراً!                           ║"
 echo_green "║                                                              ║"
 echo_green "╚══════════════════════════════════════════════════════════════╝"
-echo ""
-
-echo_yellow "═══════════════════════════════════════════════════════════════"
-echo_yellow "                      📋 أوامر مفيدة                           "
-echo_yellow "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "  إعادة تشغيل Backend:  sudo supervisorctl restart gamelo"
-echo "  عرض الأخطاء:          sudo tail -f /var/log/gamelo/error.log"
-echo "  حالة الخدمات:         sudo supervisorctl status"
-echo "  اختبار API:           curl http://localhost:8001/api/health"
 echo ""
