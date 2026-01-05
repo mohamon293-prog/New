@@ -250,7 +250,7 @@ const ProductsManagement = () => {
           {products.map((product) => (
             <div key={product.id} className="p-3 md:p-4 rounded-xl bg-card border border-border">
               <div className="flex gap-3">
-                <img src={product.image_url?.startsWith("/") ? `${API_URL.replace("/api", "")}${product.image_url}` : product.image_url} alt={product.name} className="w-16 h-16 md:w-20 md:h-20 rounded-lg object-cover flex-shrink-0" />
+                <img src={product.image_url?.startsWith("/uploads/") ? `${API_URL}${product.image_url}` : product.image_url?.startsWith("/") ? `${API_URL.replace("/api", "")}${product.image_url}` : product.image_url} alt={product.name} className="w-16 h-16 md:w-20 md:h-20 rounded-lg object-cover flex-shrink-0" onError={(e) => { e.target.src = "/placeholder-product.png"; }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
