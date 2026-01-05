@@ -216,9 +216,11 @@ class OrderResponse(BaseModel):
     total_jod: float
     total_usd: float
     status: str
-    payment_method: str
+    payment_method: Optional[str] = "wallet"
     created_at: str
     codes: Optional[List[str]] = None
+    revealed_at: Optional[str] = None
+    order_number: Optional[str] = None
 
 
 # Wallet Models
