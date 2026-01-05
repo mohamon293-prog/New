@@ -116,6 +116,14 @@ async def create_product(product: ProductCreate, admin: dict = Depends(get_admin
     product_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
+    # Generate slug if not provided
+    slug = product.slug
+    if not slug:
+        import re
+        slug = re.sub(r'[^\w\s-]', '', product.name.lower())
+        slug = re.sub(r'[-\s]+', '-', slug).strip('-')
+        slug = f"{slug}-{product_id[:8]}"
+    
     # Process variants
     variants_data = None
     if product.has_variants and product.variants:
@@ -129,6 +137,7 @@ async def create_product(product: ProductCreate, admin: dict = Depends(get_admin
     product_doc = {
         "id": product_id,
         **product.model_dump(),
+        "slug": slug,
         "variants": variants_data,
         "stock_count": 0,
         "is_active": True,
