@@ -1,64 +1,77 @@
 <analysis>**original_problem_statement:** The user has provided a comprehensive and detailed set of requirements via two major prompts ( and ). The goal is to build an all-in-one, production-ready, commercial-grade digital business platform named Gamelo. The platform must be entirely in Arabic (RTL) and require zero technical skills for an administrator to manage.
 
-**PRODUCT REQUIREMENTS (abridged from user's latest prompt):**
+**PRODUCT REQUIREMENTS (abridged):**
 *   **Core Principle:** Everything must be manageable via a visual UI. No terminal, no code, no scripts for the admin.
 *   **Platform Scope:** Unify e-commerce, support, content management (CMS), analytics, and automation into a single system.
 *   **Key Features:**
-    *   **Content & Site Structure:** Dynamic homepage (new products, bestsellers), mega-menu, breadcrumbs, and a full CMS for pages like About Us, Terms, etc.
-    *   **Advanced Products:** Support for three product types (Digital Code, Existing Account, New Account), product variants (e.g., 1/3/12 months), and multiple creation methods (Manual Form, Excel Upload).
-    *   **Order & User Management:** Full order lifecycle tracking (Pending, Failed, Completed, etc.), user profiles with purchase history and online status.
-    *   **Business Operations:** A built-in dispute/refund system, user wallet system with transaction history, advanced coupon and pricing rules, and an immutable audit log for all actions.
-    *   **Admin & Security:** Granular roles & permissions, anti-fraud/abuse system, feature toggles, and automated backups.
-    *   **Integrations & Automation:** No-code Telegram bot integration for notifications, a built-in support/messaging system, and a knowledge base.
-    *   **Analytics & Reporting:** A comprehensive analytics dashboard and an export/import system for all key data.
-*   **Starter Content:** A seed catalog of ~100 digital products (PlayStation, Steam, Adobe, etc.) must be included and fully manageable.
+    *   **Content & Site Structure:** Dynamic homepage, mega-menu, breadcrumbs, and a full CMS for pages.
+    *   **Advanced Products:** Support for three product types (Digital Code, Existing Account, New Account), product variants, and multiple creation methods (Manual, Excel).
+    *   **Order & User Management:** Full order lifecycle tracking, user profiles with purchase history.
+    *   **Business Operations:** Dispute/refund system, user wallet, coupons, and an immutable audit log.
+    *   **Admin & Security:** Granular roles & permissions (RBAC), anti-fraud system, and feature toggles.
+    *   **Integrations & Automation:** No-code Telegram bot integration for notifications and a built-in support/messaging system.
+    *   **Analytics & Reporting:** A comprehensive analytics dashboard and data export/import.
+*   **Starter Content:** A seed catalog of ~100 digital products must be included.
 *   **Architecture:** Must be modular, scalable, API-first, and secure.
 
 **User's preferred language**: Arabic (العربية)
 
 **what currently exists?**
-The application is a full-stack marketplace with a React frontend and a FastAPI/MongoDB backend. The UI is a dark theme, fully in Arabic, and right-to-left (RTL).
+The application is a full-stack marketplace with a React frontend and a modular FastAPI/MongoDB backend. The UI is a dark theme, fully in Arabic, and right-to-left (RTL).
 
-Major progress has been made:
-*   The monolithic backend () has been successfully refactored into a modular structure with separate files for routes, models, and utilities.
-*   The frontend  monolith is currently undergoing a similar refactoring, with some components already extracted.
-*   Implemented features include: full product/category/user management, advanced orders, disputes, audit logs, an enhanced coupon system, a complete Role-Based Access Control (RBAC) system, Telegram notifications for admins, and a Content Management System (CMS) for static pages and FAQs.
+**Key achievements in the last session:**
+*   **Completed Frontend Refactoring:** The monolithic  file (over 3,600 lines) was successfully broken down into 16+ individual, manageable components. This was a critical task requested by the user.
+*   **Fixed Critical Purchase Flows:** Addressed several user-reported bugs, enabling customers to:
+    *   Purchase account-based products by entering their information (email, phone) *before* checkout.
+    *   Successfully view their purchased digital codes on the My Orders page.
+*   **Fixed Admin Functionality:** Resolved issues preventing admins from manually adding new digital codes to products.
+*   **Diagnosed Integration Issues:** Pinpointed the root causes for failing Telegram notifications (invalid user token) and inconsistent product images (placeholder data vs. real uploads).
+*   **Created Documentation:** Authored a new, detailed guide for deploying the application on Hostinger.
 
 **Last working item**:
-*   **Last item agent was working**: The agent was continuing the refactoring of the massive  file. It had just created a  file to centralize common imports and was about to extract the  component into its own file ().
+*   **Last item agent was working**: The user reported that product images were not displaying. The agent investigated and confirmed that the image serving mechanism is working correctly for products that have a valid, uploaded image URL. The issue is that many products in the database still have placeholder URLs (e.g., from ), which do not render an image. The agent was in the process of confirming this diagnosis.
 *   **Status**: IN PROGRESS
-*   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: Frontend testing agent. After extracting all components, the agent must perform comprehensive regression testing using  to ensure all admin functionalities work as expected and no new bugs were introduced during the refactor. Screenshots of key admin pages should also be used to verify UI integrity.
+*   **Agent Testing Done**: Y (Verified that the API serves uploaded images correctly via .)
+*   **Which testing method agent to use?**: Frontend testing agent. The agent should demonstrate the fix by editing a product that has a placeholder image, uploading a real image, and then showing via screenshot that the image now appears correctly on the product page.
 *   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1**: Incomplete Frontend Refactoring
+*   **Issue 1**: Product Images Not Displaying Consistently
     *   **Priority**: P0
-    *   **Details**: The primary admin dashboard file, , is still a large monolith containing over 15 distinct React components. This makes maintenance and future development difficult. The refactoring process has started but is not complete.
+    *   **Details**: User reported images not showing. The root cause is not a code bug, but a data issue. Products with placeholder image URLs in the database do not show an image, while those with valid uploaded image URLs work correctly.
     *   **Next debug checklist**:
-        1.  Extract  from  into .
-        2.  Continue extracting all remaining components (Products, Categories, Orders, Disputes, etc.) into their own files within .
-        3.  Update  to import and render these new, separate components.
-        4.  Ensure all shared logic, hooks, and constants are properly managed, likely within  or other utility files.
-    *   **Why fix this issue and what will be achieved with the fix?**: Completing the refactor will significantly improve code maintainability, reduce complexity, and make it easier and safer to add new features to the admin dashboard.
+        1.  Confirm that product card and detail page components correctly use the  field.
+        2.  Select a product with a known placeholder URL from the database.
+        3.  Using the admin dashboard, edit this product and upload a new image for it.
+        4.  Verify on the live site (product list and detail page) that the new image is now displayed.
+        5.  Clearly explain to the user that images must be uploaded for each product to be displayed, and placeholder images will not show.
+    *   **Why fix this issue and what will be achieved with the fix?**: A visually complete storefront is essential for user trust and converting sales.
     *   **Status**: IN PROGRESS
     *   **Is recurring issue?**: N
     *   **Should Test frontend/backend/both after fix?**: Frontend.
     *   **Blocked on other issue**: None.
 
+*   **Issue 2**: Telegram Notifications Not Working
+    *   **Priority**: P1
+    *   **Details**: The user reported that Telegram notifications for new orders are not being sent. The backend logic has been fixed to read configuration from the database, but the  stored there is invalid (too short).
+    *   **Attempted fixes**: The agent provided the user with detailed, step-by-step instructions on how to generate a valid Bot Token and Chat ID from Telegram and where to input them in the admin dashboard.
+    *   **Next debug checklist**:
+        1.  Politely ask the user if they have had a chance to generate a new Bot Token using the instructions provided.
+        2.  Guide the user to enter the new token and their Chat ID in the Admin Dashboard's Telegram Settings page.
+        3.  Instruct the user to use the Test button to confirm the credentials are working.
+    *   **Why fix this issue and what will be achieved with the fix?**: Fulfills a key product requirement for real-time admin notifications on business events.
+    *   **Status**: BLOCKED (Awaiting valid credentials from the user).
+    *   **Is recurring issue?**: N
+    *   **Should Test frontend/backend/both after fix?**: Backend (via the test button).
+    *   **Blocked on other issue**: User action is required to provide the token.
+
 **In progress Task List**:
-*   **Task 1**: Complete  Refactoring
-    *   **Priority**: P0
-    *   **Where to resume**: Resume by creating the file  and moving the corresponding component code from  into it. Then, proceed with the other 15+ components.
-    *   **What will be achieved with this?**: A fully modular and maintainable admin dashboard frontend architecture.
-    *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?**: Frontend.
-    *   **Blocked on something**: None.
+*   None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks (P0 - Next Core Loop):**
     *   **Internal Messaging/Support System:** Build the backend logic and UI for a ticket-based or chat-based support system between users and admins.
-    *   **Frontend UX Enhancements:** Based on the user's request for improvements, explore and implement frontend features like advanced product filtering/sorting on the customer-facing site, loading skeletons, and other UI polish.
+    *   **Frontend UX Enhancements:** Implement advanced product filtering/sorting on the customer-facing site, add loading skeletons, and other UI polish.
 
 *   **Future Tasks (P1 - Long Term):**
     *   **Anti-Fraud & Abuse System:** Implement backend logic to detect duplicate accounts, limit purchase attempts, and flag suspicious behavior.
@@ -69,102 +82,94 @@ Major progress has been made:
     *   **Backup & Disaster Recovery:** Implement a one-click backup/restore mechanism.
 
 **Completed work in this session**
-*   **Phase 2 Completion:** Fully implemented and tested Advanced Orders, Disputes, Analytics Dashboard, and Audit Logs.
-*   **Backend Refactoring:** Successfully refactored the entire monolithic  into a modular structure with separate routers, models, and utility files.
-*   **Phase 3 Completion:** Fully implemented and tested an advanced Role-Based Access Control (RBAC) system and an enhanced coupon management system.
-*   **Telegram Integration:** Integrated Telegram notifications for new orders and disputes, including a settings page in the admin dashboard.
-*   **CMS Implementation:** Built a full Content Management System (backend + frontend) for creating and managing static pages (e.g., About Us) and FAQs.
-*   **Frontend Fixes:** Implemented a scroll to top on navigation feature for a smoother user experience.
-*   **Documentation:** Created a detailed deployment guide for Hostinger ().
-*   **Bug Fixes:** Resolved multiple critical bugs related to authentication, API endpoints, and frontend rendering.
+- **Admin Dashboard Refactoring:** The monolithic  was completely refactored into 16+ individual components in .
+- **Full Regression Test:** Successfully tested the refactored admin dashboard using , confirming no functionality was broken.
+- **Login/Registration Flow Fixes:**
+    - Clarified the registration process requirements (confirm password, accept terms).
+    - Confirmed auto-login on register works as intended.
+    - Added a Welcome toast notification on successful registration.
+- **Critical Purchase Flow Fixes:**
+    - **Product Types:**  and  were fixed to correctly handle input fields (email, phone) for account-based products.
+    - **Code Management:** The backend endpoint and frontend logic for manually adding digital codes to products were fixed.
+    - **Order Viewing:** Fixed a backend API crash when fetching orders and corrected the frontend logic to properly display revealed digital codes to the customer.
+- **Documentation:** Created a new detailed deployment guide: .
 
 **Earlier issues found/mentioned but not fixed**
-*   **Vague requirement:** The user's request to modify...how products are displayed has not been fully addressed from the customer's perspective. The agent added admin controls, but frontend sorting, filtering, and layout options for users are still pending. This can be addressed as part of the UX Enhancements task.
+*   **Vague requirement:** The user's request to modify...how products are displayed from the customer's perspective. This is pending and can be addressed as part of the UX Enhancements upcoming task.
 
 **Known issue recurrence from previous fork**
-*   None. The flaky login issue was thoroughly debugged and resolved in this session.
+*   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB (), Pydantic, JWT. The architecture is now modular, with routers for each domain.
-- **Frontend:** React, React Router, TailwindCSS, Axios, . The main admin page () is a large, stateful component that is currently being refactored into smaller, more manageable pieces.
-- **Architecture:** The backend has transitioned from a monolith to a modular, API-router-based structure. The frontend is in the process of the same transition.
+- **Backend:** Modular FastAPI, MongoDB (), Pydantic, JWT.
+- **Frontend:** React, React Router, TailwindCSS, Axios. The admin dashboard has been successfully refactored from a monolith to a modern component-based architecture.
+- **State Management:** React Context API (, ).
 
 **key DB schema**
-- **users**: 
-- **products**: 
-- **categories**: 
-- **orders**: 
-- **codes**: 
-- **site_settings**: 
-- **banners**: 
-- **homepage_sections**: 
-- **audit_logs**: 
-- **disputes**: 
-- **roles**: (Implicit, defined in )
-- **pages**:  (New)
-- **faqs**:  (New)
+- **orders**:  is now .  can contain an  dictionary.
+- **site_settings**: Contains a  object with , , and notification toggles.
+- **codes**: Schema for storing encrypted digital codes is in place and functional.
 
 **changes in tech stack**
-- No changes to the core stack (React, FastAPI, MongoDB). The significant change is the structural refactoring of the backend codebase from a single file into a scalable, modular architecture.
+- No changes to the core stack.
 
 **All files of reference**
-- **Refactoring Target**: 
-- **Refactoring Destination**: 
-- **Refactored Backend Entry**: 
-- **New Backend Structure**: , , 
-- **Core Frontend Logic**: , 
+- **Primary Issue Files**: ,  (for Telegram settings).
+- **Completed Refactor Target**: 
+- **Completed Refactor Destination**: 
+- **Key Logic Files Modified**: , , , , .
+- **New Documentation**: .
 
 **Areas that need refactoring**:
-- **CRITICAL/IN PROGRESS**: The  file must be fully broken down into individual component files in the  directory.
+- None. The critical frontend refactoring is complete.
 
 **key api endpoints**
-- All previous endpoints exist but are now defined in their respective router files in .
-- **New Endpoints:**
-    -  (GET, PUT)
-    -  (GET, PUT)
-    -  (GET)
-    -  (GET, POST, PUT, DELETE)
-    -  (GET, POST, PUT, DELETE)
+-  (POST): Fixed to allow admins to add codes manually as plain text.
+-  (GET): Fixed to handle legacy orders without a .
+-  (POST): Fixed to correctly retrieve and return decrypted codes.
+-  (POST): Confirmed to correctly process orders for account-based products with customer data.
+-  (PUT): The corresponding backend logic was fixed, but the endpoint relies on a valid user-provided token.
 
 **Critical Info for New Agent**
-1.  **Refactoring is P0:** The immediate and highest-priority task is to complete the refactoring of . The user explicitly requested this. Do not start new features until this is done.
-2.  **Backend is Modular:** The backend refactoring is complete and successful. All new backend logic should follow the established modular pattern by adding to or creating new files in the  and  directories.
-3.  **User Is Engaged:** The user responds quickly in Arabic and has a clear vision. Present clear plans using  and wait for their confirmation (اكمل, نعم) before proceeding.
-4.  **Language:** All user communication MUST be in Arabic.
+1.  **Prioritize User Issues:** The immediate focus should be on resolving the two outstanding user-reported issues: inconsistent product images and non-functional Telegram notifications.
+2.  **Images Issue is Data, Not Code:** The image problem is due to placeholder data in the database. The solution is to guide the user on how to upload real images via the admin panel. Do not change the rendering code itself unless a bug is found there.
+3.  **Telegram is BLOCKED on User:** The Telegram issue is fully diagnosed. The backend code is correct, but the stored Bot Token is invalid. You are blocked until the user provides a correct token. Reiterate the instructions clearly and politely.
+4.  **Refactoring is COMPLETE:** Acknowledge the completion of the major  refactoring. This was a significant achievement and a direct user request.
+5.  **Language:** All communication with the user MUST be in Arabic.
 
 **documents and test reports created in this job**
--  (created and updated)
--  (created)
 - 
 - 
+-  (updated with refactoring completion status)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **USER**: نعم (Yes) - Agreed to implement Roles & Permissions and Coupons.
-2.  **USER**: قستقسيم الملفات الكبيرة (Splitting the large files) - Prioritized refactoring over CMS.
-3.  **USER**: اكمل (Continue) - Acknowledged the creation of backend model files during refactoring.
-4.  **USER**: نعم اكمل وتأكد من التنقل بين الصفحات يجري بسلاسة وليس من اخر الصفحة واخبرني كيف ارفعه على هوستنجر (Yes, continue, and make sure navigation between pages is smooth... and tell me how to upload it to Hostinger) - Confirmed continuing with CMS and added two new requirements.
-5.  **USER**: نعم (Yes) - Triggered the agent to ask for clarification on the next task.
-6.  **USER**: 🛠️ تحسينات: إكمال تقسيم AdminDashboard.js - استخراج باقي المكونات تحسين تجربة المستخدم - إضافة ميزات للواجهة الأمامية (Improvements: Complete splitting AdminDashboard.js - extract remaining components. Improve user experience - add features to the frontend) - User explicitly selected the next tasks.
+1.  User reported multiple issues: can't add codes, can't buy, no input fields for account products. (Addressed)
+2.  User asked how to deploy to Hostinger from scratch. (Addressed with a new guide)
+3.  User reported purchase flow for account-types was wrong (customer data entry timing). (Addressed)
+4.  User asked to ensure all features are working 100%. (Work in progress)
+5.  User reported Telegram notifications not being sent. (Diagnosed, blocked on user)
+6.  User reported uploaded product images are not displayed. (In progress, diagnosed as a data issue)
 
 **Project Health Check:**
-*   **Broken**:  is in a transitional state. While the app works, the file itself contains a mix of implemented components and components that are yet to be extracted, making it fragile.
+*   **Broken**:
+    *   Telegram notifications (non-functional due to an invalid user-provided credential).
 *   **Mocked**: N/A
+*   **Data-dependent Issues**: The display of product images is entirely dependent on valid URLs being present in the database for each product.
 
 **3rd Party Integrations**
-*   **emergentintegrations**: Used for Telegram notifications. Configured via  and API.
+*   **emergentintegrations**: Used for Telegram notifications. The backend code is now correctly implemented to use settings from the database, but the integration is offline pending a valid Bot Token from the user.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. Agent correctly used  after completing Phase 2 and Phase 3, reviewing the reports each time.
+- **Testing agent used after significant changes**: YES, a full regression test was successfully run on the refactored admin dashboard.
 - **Troubleshoot agent used after agent stuck in loop**: NO.
 - **Test files created**: None.
-- **Known regressions**: None. All identified regressions during development were fixed.
+- **Known regressions**: None.
 
 **Credentials to test flow:**
 *   **Admin User**:  / 
-*   **Note**: The password was reset during the session, and the auth logic was fixed. This user is confirmed working.
 
 **What agent forgot to execute**
-*   The agent has followed the user's instructions very closely and has not forgotten any explicit tasks. The broad task of UX improvements will need to be planned and clarified with the user after the current refactoring is complete.</analysis>
+*   The agent systematically addressed a long and complex list of user-reported issues while also completing a major refactoring task. Nothing was forgotten; the current work is a direct continuation of the last user-reported issue.</analysis>
