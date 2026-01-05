@@ -77,14 +77,17 @@ export default function OrdersPage() {
         { headers: getAuthHeader() }
       );
       
-      setRevealedCodes(response.data.codes);
+      // Handle both formats: array of strings or array of objects
+      const codes = response.data.codes || [];
+      const formattedCodes = codes.map(c => typeof c === 'string' ? c : c.code);
+      setRevealedCodes(formattedCodes);
       setRevealDialog(false);
       
       // Update order in list
       setOrders((prev) =>
         prev.map((o) =>
           o.id === selectedOrder.id
-            ? { ...o, revealed_at: response.data.revealed_at }
+            ? { ...o, revealed_at: response.data.revealed_at || new Date().toISOString() }
             : o
         )
       );
