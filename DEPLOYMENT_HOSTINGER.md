@@ -248,7 +248,7 @@ systemctl status gamelo-backend
 systemctl status nginx
 
 # اختبار API
-curl https://yourdomain.com/api/
+curl https://gamelo.org/api/]
 ```
 
 ---
