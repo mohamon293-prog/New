@@ -16,29 +16,58 @@ router = APIRouter(tags=["Orders"])
 
 async def notify_new_order(order: dict, user: dict):
     """Send Telegram notification for new order"""
-    from utils.database import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
     import httpx
     
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-    
     try:
+        # Get telegram settings from database
+        telegram_settings = await db.site_settings.find_one({"type": "telegram"})
+        
+        if not telegram_settings:
+            return
+            
+        bot_token = telegram_settings.get("bot_token")
+        chat_id = telegram_settings.get("chat_id")
+        notify_orders = telegram_settings.get("notify_new_orders", True)
+        
+        if not bot_token or not chat_id or not notify_orders:
+            return
+        
         products = ", ".join([item.get("product_name", "منتج") for item in order.get("items", [])])
+        
+        # Add product type info
+        product_type = order.get("product_type", "digital_code")
+        type_labels = {"digital_code": "🔑 كود رقمي", "existing_account": "👤 حساب جاهز", "new_account": "📱 حساب جديد"}
+        type_label = type_labels.get(product_type, "🔑 كود رقمي")
+        
         message = f"""<b>🛒 طلب جديد!</b>
 
 <b>رقم الطلب:</b> #{order.get('order_number', order['id'][:8])}
 <b>العميل:</b> {user.get('name', 'غير معروف')}
+<b>البريد:</b> {user.get('email', '-')}
 <b>المبلغ:</b> {order.get('total_jod', 0):.2f} د.أ
 <b>المنتجات:</b> {products}
+<b>النوع:</b> {type_label}
+<b>الحالة:</b> {order.get('status', '-')}
 <b>التاريخ:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}"""
+
+        # Add customer details for account products
+        if product_type != "digital_code" and order.get("customer_details"):
+            details = order.get("customer_details", {})
+            message += f"\n\n<b>📋 بيانات العميل:</b>"
+            if details.get("email"):
+                message += f"\n• البريد: {details['email']}"
+            if details.get("phone"):
+                message += f"\n• الهاتف: {details['phone']}"
         
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         async with httpx.AsyncClient() as client:
-            await client.post(url, json={
-                "chat_id": TELEGRAM_CHAT_ID,
+            response = await client.post(url, json={
+                "chat_id": chat_id,
                 "text": message,
                 "parse_mode": "HTML"
             })
+            if response.status_code != 200:
+                logger.error(f"Telegram API error: {response.text}")
     except Exception as e:
         logger.error(f"Failed to send Telegram notification: {e}")
 
