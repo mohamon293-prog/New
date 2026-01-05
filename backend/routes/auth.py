@@ -33,9 +33,13 @@ async def register(user_data: UserCreate, request: Request):
         "name": user_data.name,
         "phone": user_data.phone,
         "role": "buyer",
+        "role_level": 1,
+        "permissions": [],
         "is_active": True,
         "is_approved": True,
         "wallet_balance": 0.0,
+        "wallet_balance_jod": 0.0,
+        "wallet_balance_usd": 0.0,
         "created_at": now,
         "updated_at": now
     }
