@@ -53,7 +53,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(formData.name, formData.email, formData.password, formData.phone);
-      toast.success(`مرحباً ${formData.name}! تم إنشاء حسابك وتسجيل دخولك تلقائياً 🎉`);
+      toast.success(`مرحباً ${formData.name}! تم إنشاء حسابك وتسجيل دخولك تلقائياً 🎉`, {
+        duration: 5000,
+      });
       navigate("/");
     } catch (error) {
       console.error("Register failed:", error);
