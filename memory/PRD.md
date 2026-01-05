@@ -169,7 +169,7 @@
 
 ### Admin Account
 - **Email**: admin@gamelo.com
-- **Password**: Test123!
+- **Password**: admin123
 
 ### إحصائيات الحالية
 - المستخدمين: 9
