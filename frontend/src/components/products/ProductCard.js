@@ -1,11 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
-import { formatPrice } from "../../lib/utils";
+import { formatPrice, API_URL } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { ShoppingCart, Star, Zap } from "lucide-react";
 import { toast } from "sonner";
+
+// Helper to get the correct image URL
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return "/placeholder-product.png";
+  if (imageUrl.startsWith("/")) {
+    return `${API_URL.replace("/api", "")}${imageUrl}`;
+  }
+  return imageUrl;
+};
 
 export const ProductCard = ({ product }) => {
   const { addItem, currency } = useCart();
@@ -39,10 +48,11 @@ export const ProductCard = ({ product }) => {
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <img
-          src={product.image_url}
+          src={getImageUrl(product.image_url)}
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
+          onError={(e) => { e.target.src = "/placeholder-product.png"; }}
         />
         
         {/* Badges - Top */}
