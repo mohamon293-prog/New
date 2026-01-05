@@ -60,7 +60,7 @@ ssh root@IP_الخادم
 انسخ هذا الأمر، غيّر `YOUR_DOMAIN` و `YOUR_EMAIL` و `YOUR_GITHUB_REPO`:
 
 ```bash
-export DOMAIN="YOUR_DOMAIN" EMAIL="YOUR_EMAIL" REPO="YOUR_GITHUB_REPO" && bash << 'INSTALL'
+export DOMAIN="gamelo.org" EMAIL="mohamon291@gmail.com" REPO="https://github.com/mohamon293-prog/New" && bash << 'INSTALL'
 #!/bin/bash
 set -e
 echo "🎮 بدء تثبيت Gamelo..."
