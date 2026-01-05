@@ -123,25 +123,26 @@ class ProductResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     name: str
-    name_en: str
-    slug: str
-    description: str
+    name_en: str = ""
+    slug: str = ""
+    description: str = ""
     description_en: Optional[str] = None
-    category_id: str
+    category_id: str = ""
     category_name: Optional[str] = None
-    price_jod: float
-    price_usd: float
+    price_jod: float = 0.0
+    price_usd: float = 0.0
     original_price_jod: Optional[float] = None
     original_price_usd: Optional[float] = None
-    image_url: str
-    platform: str
-    region: str
-    stock_count: int
-    is_active: bool
-    is_featured: bool
-    rating: float
-    review_count: int
-    sold_count: int
+    image_url: str = ""
+    platform: str = ""
+    region: str = "عالمي"
+    stock_count: int = 0
+    available_codes: int = 0
+    is_active: bool = True
+    is_featured: bool = False
+    rating: float = 0.0
+    review_count: int = 0
+    sold_count: int = 0
     product_type: str = "digital_code"
     has_variants: bool = False
     variants: Optional[List[Dict]] = None
@@ -149,6 +150,7 @@ class ProductResponse(BaseModel):
     requires_password: bool = False
     requires_phone: bool = False
     delivery_instructions: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 # Banner/Slider Models
