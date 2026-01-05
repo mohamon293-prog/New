@@ -661,14 +661,7 @@ async def root():
     return {"message": "مرحباً بك في Gamelo API", "version": "2.0"}
 
 
-# Include router in app
-app.include_router(api_router)
-
-# Mount uploads directory
-if UPLOAD_DIR.exists():
-    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
-
-# Add CORS middleware
+# Add CORS middleware (must be before static files mount)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -676,6 +669,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include router in app
+app.include_router(api_router)
+
+# Mount uploads directory
+if UPLOAD_DIR.exists():
+    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 
 # Startup event
