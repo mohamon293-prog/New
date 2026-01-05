@@ -184,22 +184,22 @@ const ProductsManagement = () => {
       return;
     }
 
+    // Parse codes (one per line)
+    const codesArray = codesText.split('\n').map(c => c.trim()).filter(c => c.length > 0);
+    
+    if (codesArray.length === 0) {
+      toast.error("لم يتم العثور على أكواد صالحة");
+      return;
+    }
+
     setAddingCodes(true);
     try {
       const response = await axios.post(
-        `${API_URL}/admin/products/${codesDialog.id}/codes/upload`,
-        codesText,
-        { 
-          headers: {
-            ...getAuthHeader(),
-            'Content-Type': 'text/plain'
-          }
-        }
+        `${API_URL}/admin/products/${codesDialog.id}/codes/add`,
+        codesArray,
+        { headers: getAuthHeader() }
       );
-      toast.success(`تم إضافة ${response.data.codes_added} كود`);
-      if (response.data.duplicates_skipped > 0) {
-        toast.info(`تم تخطي ${response.data.duplicates_skipped} كود مكرر`);
-      }
+      toast.success(response.data.message || `تم إضافة الأكواد بنجاح`);
       setCodesDialog(null);
       setNewCodes("");
       fetchProducts();
