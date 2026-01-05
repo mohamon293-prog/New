@@ -107,7 +107,9 @@ export default function CartPage() {
 
         // Add account info for non-digital products
         if (item.product_type && item.product_type !== "digital_code" && item.accountInfo) {
-          orderData.account_info = item.accountInfo;
+          orderData.customer_email = item.accountInfo.email || null;
+          orderData.customer_password = item.accountInfo.password || null;
+          orderData.customer_phone = item.accountInfo.phone || null;
         }
 
         await axios.post(
