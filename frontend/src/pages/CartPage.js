@@ -28,6 +28,15 @@ import {
   User,
 } from "lucide-react";
 
+// Helper to get the correct image URL
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return "/placeholder-product.png";
+  if (imageUrl.startsWith("/")) {
+    return `${API_URL.replace("/api", "")}${imageUrl}`;
+  }
+  return imageUrl;
+};
+
 export default function CartPage() {
   const { 
     items, 
@@ -201,9 +210,10 @@ export default function CartPage() {
                   {/* Product Image */}
                   <Link to={`/products/${item.id}`}>
                     <img
-                      src={item.image_url}
+                      src={getImageUrl(item.image_url)}
                       alt={item.name}
                       className="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover flex-shrink-0"
+                      onError={(e) => { e.target.src = "/placeholder-product.png"; }}
                     />
                   </Link>
 
