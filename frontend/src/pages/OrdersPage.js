@@ -56,9 +56,20 @@ export default function OrdersPage() {
 
   const handleRevealCodes = async (order) => {
     if (order.revealed_at) {
-      // Already revealed, just show the codes
-      setSelectedOrder(order);
-      setRevealedCodes(order.items.flatMap((item) => item.codes));
+      // Already revealed, fetch the codes again
+      try {
+        const response = await axios.post(
+          `${API_URL}/orders/${order.id}/reveal`,
+          {},
+          { headers: getAuthHeader() }
+        );
+        const codes = response.data.codes || [];
+        const formattedCodes = codes.map(c => typeof c === 'string' ? c : c.code);
+        setRevealedCodes(formattedCodes);
+        setSelectedOrder(order);
+      } catch (error) {
+        toast.error("فشل في تحميل الأكواد");
+      }
       return;
     }
 
