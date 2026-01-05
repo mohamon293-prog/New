@@ -97,17 +97,17 @@ class ProductVariant(BaseModel):
 
 class ProductCreate(BaseModel):
     name: str
-    name_en: str
-    slug: str
-    description: str
+    name_en: str = ""
+    slug: str = ""
+    description: str = ""
     description_en: Optional[str] = None
     category_id: str
     price_jod: float
     price_usd: float
     original_price_jod: Optional[float] = None
     original_price_usd: Optional[float] = None
-    image_url: str
-    platform: str
+    image_url: str = ""
+    platform: str = ""
     region: str = "عالمي"
     is_featured: bool = False
     product_type: str = "digital_code"
