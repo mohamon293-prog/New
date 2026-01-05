@@ -280,6 +280,42 @@ async def get_platforms():
     return PLATFORMS
 
 
+# ==================== FILE SERVING ENDPOINT ====================
+
+from fastapi.responses import FileResponse
+
+@api_router.get("/uploads/{folder}/{filename}")
+async def serve_upload(folder: str, filename: str):
+    """Serve uploaded files with proper CORS headers"""
+    if folder not in ["images", "banners", "products"]:
+        raise HTTPException(status_code=400, detail="Invalid folder")
+    
+    filepath = UPLOAD_DIR / folder / filename
+    
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine media type
+    ext = filename.split(".")[-1].lower() if "." in filename else ""
+    media_types = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg", 
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp"
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+    
+    return FileResponse(
+        path=str(filepath),
+        media_type=media_type,
+        headers={
+            "Cache-Control": "public, max-age=31536000",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
+
+
 # ==================== FILE UPLOAD ENDPOINTS ====================
 
 @api_router.post("/upload/image")
