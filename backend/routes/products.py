@@ -57,6 +57,7 @@ async def get_products(
             "is_sold": False
         })
         product["stock_count"] = stock
+        product["available_codes"] = stock
         
         # Get category name
         category = await db.categories.find_one({"id": product.get("category_id")})
