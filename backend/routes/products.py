@@ -283,7 +283,13 @@ async def upload_product_codes(
         await db.codes.insert_one(code_doc)
         codes_added += 1
     
-    return {"message": f"تم إضافة {codes_added} كود"}
+    # Update product stock count
+    await db.products.update_one(
+        {"id": product_id},
+        {"$inc": {"stock_count": codes_added}}
+    )
+    
+    return {"added": codes_added, "message": f"تم إضافة {codes_added} كود بنجاح"}
 
 
 @router.post("/admin/products/{product_id}/codes/add")
