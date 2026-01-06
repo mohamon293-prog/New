@@ -54,6 +54,7 @@ from routes.admin import router as admin_router
 from routes.disputes import router as disputes_router
 from routes.discounts import router as discounts_router
 from routes.cms import router as cms_router
+from routes.wallet import router as wallet_router
 
 # Import models and utils
 from models.schemas import (
@@ -74,6 +75,7 @@ api_router.include_router(admin_router)
 api_router.include_router(disputes_router)
 api_router.include_router(discounts_router)
 api_router.include_router(cms_router)
+api_router.include_router(wallet_router)
 
 
 # ==================== WALLET ENDPOINTS ====================
