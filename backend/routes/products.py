@@ -68,8 +68,13 @@ async def get_products(
 
 @router.get("/products/{product_id}", response_model=ProductResponse)
 async def get_product(product_id: str):
-    """Get single product by ID"""
+    """Get single product by ID or slug"""
+    # Try to find by ID first, then by slug
     product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    
+    if not product:
+        # Try by slug
+        product = await db.products.find_one({"slug": product_id}, {"_id": 0})
     
     if not product:
         raise HTTPException(status_code=404, detail="المنتج غير موجود")
