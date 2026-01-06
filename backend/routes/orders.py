@@ -109,7 +109,7 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
     codes = []
     if product.get("product_type", "digital_code") == "digital_code":
         available_codes = await db.codes.find({
-            "product_id": order.product_id,
+            "product_id": actual_product_id,
             "is_sold": False
         }).limit(order.quantity).to_list(order.quantity)
         
@@ -127,7 +127,7 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
         "order_number": order_id[:8].upper(),
         "user_id": user["id"],
         "items": [{
-            "product_id": order.product_id,
+            "product_id": actual_product_id,
             "product_name": product["name"],
             "quantity": order.quantity,
             "price_jod": price_jod,
