@@ -24,6 +24,12 @@ import {
   Clock,
   AlertTriangle,
   ShoppingBag,
+  User,
+  Calendar,
+  Info,
+  Key,
+  Mail,
+  Lock,
 } from "lucide-react";
 
 export default function OrdersPage() {
@@ -35,6 +41,7 @@ export default function OrdersPage() {
   const [revealDialog, setRevealDialog] = useState(false);
   const [revealedCodes, setRevealedCodes] = useState([]);
   const [revealing, setRevealing] = useState(false);
+  const [accountDetailsDialog, setAccountDetailsDialog] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -56,7 +63,6 @@ export default function OrdersPage() {
 
   const handleRevealCodes = async (order) => {
     if (order.revealed_at) {
-      // Already revealed, fetch the codes again
       try {
         const response = await axios.post(
           `${API_URL}/orders/${order.id}/reveal`,
@@ -88,13 +94,11 @@ export default function OrdersPage() {
         { headers: getAuthHeader() }
       );
       
-      // Handle both formats: array of strings or array of objects
       const codes = response.data.codes || [];
       const formattedCodes = codes.map(c => typeof c === 'string' ? c : c.code);
       setRevealedCodes(formattedCodes);
       setRevealDialog(false);
       
-      // Update order in list
       setOrders((prev) =>
         prev.map((o) =>
           o.id === selectedOrder.id
@@ -117,24 +121,40 @@ export default function OrdersPage() {
     toast.success("تم نسخ الكود");
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("تم النسخ");
+  };
+
+  // Determine if order is for account type product
+  const isAccountProduct = (order) => {
+    return order.product_type === "existing_account" || order.product_type === "new_account";
+  };
+
   const getStatusBadge = (order) => {
-    const productType = order.product_type || "digital_code";
-    
     // For account products
-    if (productType === "existing_account" || productType === "new_account") {
+    if (isAccountProduct(order)) {
       if (order.status === "delivered") {
         return (
           <Badge className="bg-green-500">
             <CheckCircle className="h-3 w-3 ml-1" />
-            تم التسليم
+            تم الاشتراك
           </Badge>
         );
       }
-      if (order.status === "awaiting_admin") {
+      if (order.status === "awaiting_admin" || order.status === "pending") {
         return (
           <Badge className="bg-orange-500">
             <Clock className="h-3 w-3 ml-1" />
             قيد التنفيذ
+          </Badge>
+        );
+      }
+      if (order.status === "refunded") {
+        return (
+          <Badge variant="destructive">
+            <AlertTriangle className="h-3 w-3 ml-1" />
+            مسترد
           </Badge>
         );
       }
@@ -152,7 +172,7 @@ export default function OrdersPage() {
     if (order.status === "completed") {
       return (
         <Badge className="bg-accent">
-          <Clock className="h-3 w-3 ml-1" />
+          <Key className="h-3 w-3 ml-1" />
           جاهز للكشف
         </Badge>
       );
@@ -171,6 +191,16 @@ export default function OrdersPage() {
         {order.status}
       </Badge>
     );
+  };
+
+  const getProductTypeBadge = (order) => {
+    if (order.product_type === "existing_account") {
+      return <Badge variant="outline" className="text-purple-500 border-purple-500/50">حساب جاهز</Badge>;
+    }
+    if (order.product_type === "new_account") {
+      return <Badge variant="outline" className="text-orange-500 border-orange-500/50">حساب جديد</Badge>;
+    }
+    return <Badge variant="outline" className="text-blue-500 border-blue-500/50">كود رقمي</Badge>;
   };
 
   if (loading) {
@@ -227,12 +257,13 @@ export default function OrdersPage() {
               {/* Order Header */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                 <div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Package className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-mono text-sm text-muted-foreground ltr-nums">
-                      #{order.id.slice(0, 8)}
+                    <span className="font-mono text-sm font-bold ltr-nums">
+                      #{order.order_number || order.id.slice(0, 8)}
                     </span>
                     {getStatusBadge(order)}
+                    {getProductTypeBadge(order)}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {formatDate(order.created_at)}
@@ -273,82 +304,80 @@ export default function OrdersPage() {
                 ))}
               </div>
 
-              {/* Account Delivery Info */}
-              {(order.product_type === "existing_account" || order.product_type === "new_account") && order.delivery_data && (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 mt-4">
-                  <h4 className="font-bold text-green-500 mb-3 flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5" />
-                    تم تنفيذ طلبك بنجاح!
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    {order.delivery_data.email && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">البريد الإلكتروني:</span>
-                        <span className="font-mono" dir="ltr">{order.delivery_data.email}</span>
+              {/* === ACCOUNT PRODUCTS SECTION === */}
+              {isAccountProduct(order) && (
+                <>
+                  {/* Delivered - Show Account Details */}
+                  {order.status === "delivered" && order.delivery_data && (
+                    <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 mt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold text-green-500 flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5" />
+                          تم الاشتراك بنجاح!
+                        </h4>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setAccountDetailsDialog(order)}
+                        >
+                          <Eye className="h-4 w-4 ml-1" />
+                          عرض التفاصيل
+                        </Button>
                       </div>
-                    )}
-                    {order.delivery_data.password && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">كلمة المرور:</span>
-                        <span className="font-mono" dir="ltr">{order.delivery_data.password}</span>
+                      
+                      {/* Quick Info */}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {order.delivery_data.subscription_end && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">ينتهي:</span>
+                            <span className="font-bold text-green-500">{order.delivery_data.subscription_end}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {order.delivery_data.subscription_end && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">تاريخ انتهاء الاشتراك:</span>
-                        <span className="font-bold text-green-500">{order.delivery_data.subscription_end}</span>
+                    </div>
+                  )}
+
+                  {/* Awaiting Admin */}
+                  {(order.status === "awaiting_admin" || order.status === "pending") && (
+                    <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 mt-4">
+                      <h4 className="font-bold text-orange-500 mb-2 flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        جاري تفعيل حسابك
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        سيتم تفعيل حسابك وإرسال البيانات خلال ساعتين كحد أقصى. 
+                        ستصلك إشعار فور اكتمال التفعيل.
+                      </p>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Info className="h-4 w-4" />
+                        <span>يمكنك متابعة حالة طلبك من هذه الصفحة</span>
                       </div>
-                    )}
-                    {order.delivery_data.notes && (
-                      <div className="mt-2 p-2 bg-secondary rounded">
-                        <span className="text-muted-foreground">ملاحظات: </span>
-                        <span>{order.delivery_data.notes}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Awaiting Admin Notice */}
-              {(order.product_type === "existing_account" || order.product_type === "new_account") && order.status === "awaiting_admin" && (
-                <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30 mt-4">
-                  <h4 className="font-bold text-orange-500 mb-2 flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    طلبك قيد التنفيذ
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    سيتم تنفيذ طلبك وإرسال بيانات الحساب خلال ساعتين كحد أقصى. ستصلك إشعار عند اكتمال الطلب.
-                  </p>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex justify-end pt-4 border-t border-border">
-                {/* Show reveal codes button for digital codes OR if product_type is not set (backwards compatibility) */}
-                {(!order.product_type || order.product_type === "digital_code") && (
+              {/* === DIGITAL CODES SECTION === */}
+              {!isAccountProduct(order) && (
+                <div className="flex justify-end pt-4 border-t border-border">
                   <Button
                     variant={order.revealed_at ? "outline" : "default"}
                     className="gap-2"
                     onClick={() => handleRevealCodes(order)}
                     data-testid={`reveal-codes-${order.id}`}
                   >
-                    <Eye className="h-4 w-4" />
+                    <Key className="h-4 w-4" />
                     {order.revealed_at ? "عرض الأكواد" : "كشف الأكواد"}
                   </Button>
-                )}
-                {(order.product_type === "existing_account" || order.product_type === "new_account") && order.status === "delivered" && (
-                  <Badge className="bg-green-500 px-4 py-2">
-                    <CheckCircle className="h-4 w-4 ml-2" />
-                    تم التسليم
-                  </Badge>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Reveal Confirmation Dialog */}
+      {/* Reveal Codes Confirmation Dialog */}
       <Dialog open={revealDialog} onOpenChange={setRevealDialog}>
         <DialogContent>
           <DialogHeader>
@@ -382,34 +411,28 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Codes Display Dialog */}
-      <Dialog
-        open={revealedCodes.length > 0}
-        onOpenChange={() => setRevealedCodes([])}
-      >
-        <DialogContent>
+      {/* Revealed Codes Dialog */}
+      <Dialog open={!!selectedOrder && revealedCodes.length > 0} onOpenChange={() => { setSelectedOrder(null); setRevealedCodes([]); }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              أكواد الطلب
+              <Key className="h-5 w-5 text-primary" />
+              أكواد طلبك
             </DialogTitle>
-            <DialogDescription className="text-right">
-              انسخ الأكواد واحفظها في مكان آمن
+            <DialogDescription>
+              انسخ الأكواد واستخدمها. احتفظ بها في مكان آمن.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-3 py-4">
+          <div className="space-y-3 max-h-60 overflow-y-auto">
             {revealedCodes.map((code, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary"
+                className="flex items-center justify-between p-3 rounded-lg bg-secondary"
               >
-                <code className="font-mono text-sm ltr-nums break-all">
-                  {code}
-                </code>
+                <code className="font-mono text-sm" dir="ltr">{code}</code>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={() => copyCode(code)}
                 >
                   <Copy className="h-4 w-4" />
@@ -417,13 +440,99 @@ export default function OrdersPage() {
               </div>
             ))}
           </div>
+          <DialogFooter>
+            <Button onClick={() => { setSelectedOrder(null); setRevealedCodes([]); }}>
+              إغلاق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
-            <p className="text-sm text-destructive">
-              <strong>تنبيه:</strong> احفظ هذه الأكواد في مكان آمن.
-              لا يمكن استرداد المبلغ بعد كشف الأكواد.
-            </p>
-          </div>
+      {/* Account Details Dialog */}
+      <Dialog open={!!accountDetailsDialog} onOpenChange={() => setAccountDetailsDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-green-500" />
+              تفاصيل حسابك
+            </DialogTitle>
+            <DialogDescription>
+              بيانات الحساب الخاص بك بعد الاشتراك
+            </DialogDescription>
+          </DialogHeader>
+          
+          {accountDetailsDialog?.delivery_data && (
+            <div className="space-y-4">
+              {/* Account Credentials */}
+              <div className="p-4 rounded-xl bg-secondary/50 space-y-3">
+                {accountDetailsDialog.delivery_data.email && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">البريد الإلكتروني:</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-sm" dir="ltr">{accountDetailsDialog.delivery_data.email}</code>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(accountDetailsDialog.delivery_data.email)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {accountDetailsDialog.delivery_data.password && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">كلمة المرور:</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-sm" dir="ltr">{accountDetailsDialog.delivery_data.password}</code>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(accountDetailsDialog.delivery_data.password)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {accountDetailsDialog.delivery_data.subscription_end && (
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">ينتهي الاشتراك:</span>
+                    </div>
+                    <span className="font-bold text-green-500">{accountDetailsDialog.delivery_data.subscription_end}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Instructions */}
+              {accountDetailsDialog.delivery_data.notes && (
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                  <h5 className="font-bold text-blue-500 mb-2 flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    تعليمات مهمة
+                  </h5>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {accountDetailsDialog.delivery_data.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Warning */}
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm">
+                <p className="text-destructive font-medium">
+                  ⚠️ لا تشارك بيانات حسابك مع أي شخص. احتفظ بها في مكان آمن.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setAccountDetailsDialog(null)}>
+              إغلاق
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
