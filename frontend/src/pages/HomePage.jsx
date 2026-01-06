@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { categories, featuredProducts, trustFeatures, stats } from "../data/mockData";
+import axios from "axios";
 import { useCart } from "../context/CartContext";
 import { ProductCard } from "../components/products/ProductCard";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Skeleton } from "../components/ui/skeleton";
+import { API_URL } from "../lib/utils";
 import {
   ShieldCheck,
   Zap,
@@ -18,6 +20,13 @@ import {
   Smartphone,
   Star,
 } from "lucide-react";
+
+const trustFeatures = [
+  { icon: "shield-check", title: "دفع آمن", description: "معاملات مشفرة 100%" },
+  { icon: "zap", title: "توصيل فوري", description: "احصل على الكود فوراً" },
+  { icon: "headphones", title: "دعم 24/7", description: "فريق دعم متاح دائماً" },
+  { icon: "tag", title: "أفضل الأسعار", description: "أسعار تنافسية مضمونة" },
+];
 
 const iconMap = {
   "shield-check": ShieldCheck,
@@ -37,10 +46,54 @@ const platformIconMap = {
 
 export default function HomePage() {
   const { currency } = useCart();
+  const [categories, setCategories] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [stats, setStats] = useState([
+    { value: "10,000+", label: "عميل سعيد" },
+    { value: "50,000+", label: "طلب مكتمل" },
+    { value: "24/7", label: "دعم فني" },
+    { value: "100%", label: "رضا العملاء" },
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Fetch categories
+      const catResponse = await axios.get(`${API_URL}/categories`);
+      setCategories(catResponse.data);
+
+      // Fetch featured products
+      const prodResponse = await axios.get(`${API_URL}/products?featured=true&limit=8`);
+      setFeaturedProducts(prodResponse.data);
+      
+      // Try to fetch stats
+      try {
+        const statsResponse = await axios.get(`${API_URL}/stats/public`);
+        if (statsResponse.data) {
+          setStats([
+            { value: `${statsResponse.data.total_users || 100}+`, label: "عميل سعيد" },
+            { value: `${statsResponse.data.total_orders || 50}+`, label: "طلب مكتمل" },
+            { value: "24/7", label: "دعم فني" },
+            { value: "100%", label: "رضا العملاء" },
+          ]);
+        }
+      } catch (e) {
+        // Use default stats
+      }
+    } catch (error) {
+      console.error("Failed to fetch homepage data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section - Mobile Optimized */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden mesh-gradient">
         <div className="px-4 py-10 md:py-16 lg:py-24">
           <div className="max-w-7xl mx-auto">
@@ -117,7 +170,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trust Features - Mobile Scroll */}
+      {/* Trust Features */}
       <section className="border-y border-border bg-card/50">
         <div className="px-4 py-6">
           <div className="max-w-7xl mx-auto">
@@ -145,7 +198,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories - Mobile Optimized */}
+      {/* Categories Section */}
       <section className="px-4 py-10 md:py-16">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -161,24 +214,36 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 md:gap-4">
-            {categories.map((category) => {
-              const Icon = platformIconMap[category.slug] || Gamepad2;
-              return (
-                <Link
-                  key={category.id}
-                  to={`/products?platform=${category.slug}`}
-                  className="group flex flex-col items-center p-3 sm:p-4 md:p-6 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-all duration-300"
-                  data-testid={`category-${category.slug}`}
-                >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mb-2 md:mb-4 rounded-xl bg-secondary flex items-center justify-center">
-                    <Icon className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary group-hover:scale-110 transition-transform duration-300" />
-                  </div>
-                  <h3 className="font-heading font-bold text-xs sm:text-sm text-center leading-tight">{category.name}</h3>
-                </Link>
-              );
-            })}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 md:gap-4">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-24 md:h-32 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 md:gap-4">
+              {categories.map((category) => {
+                const Icon = platformIconMap[category.slug || category.id] || Gamepad2;
+                return (
+                  <Link
+                    key={category.id}
+                    to={`/products?category=${category.id}`}
+                    className="group flex flex-col items-center p-3 sm:p-4 md:p-6 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-all duration-300"
+                    data-testid={`category-${category.slug || category.id}`}
+                  >
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mb-2 md:mb-4 rounded-xl bg-secondary flex items-center justify-center overflow-hidden">
+                      {category.image_url ? (
+                        <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icon className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary group-hover:scale-110 transition-transform duration-300" />
+                      )}
+                    </div>
+                    <h3 className="font-heading font-bold text-xs sm:text-sm text-center leading-tight">{category.name}</h3>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           <Link to="/products" className="block sm:hidden mt-4">
             <Button variant="outline" className="w-full">عرض جميع الفئات</Button>
@@ -186,7 +251,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products - Mobile Optimized */}
+      {/* Featured Products Section */}
       <section className="px-4 py-10 md:py-16 bg-card/30">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -194,7 +259,7 @@ export default function HomePage() {
               <h2 className="font-heading text-xl md:text-2xl lg:text-3xl font-bold">منتجات مميزة</h2>
               <p className="text-sm text-muted-foreground mt-1">أكثر المنتجات مبيعاً</p>
             </div>
-            <Link to="/products?featured=true" className="hidden sm:block">
+            <Link to="/products" className="hidden sm:block">
               <Button variant="ghost" size="sm" className="gap-1">
                 عرض الكل
                 <ChevronLeft className="h-4 w-4" />
@@ -202,22 +267,36 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Mobile: Horizontal Scroll, Desktop: Grid */}
-          <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible scrollbar-hide">
-            {featuredProducts.slice(0, 6).map((product) => (
-              <div key={product.id} className="flex-shrink-0 w-[180px] sm:w-[220px] md:w-auto">
-                <ProductCard product={product} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-64 rounded-xl" />
+              ))}
+            </div>
+          ) : featuredProducts.length > 0 ? (
+            <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible scrollbar-hide">
+              {featuredProducts.slice(0, 10).map((product) => (
+                <div key={product.id} className="flex-shrink-0 w-[180px] sm:w-[220px] md:w-auto">
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>لا توجد منتجات مميزة حالياً</p>
+              <Link to="/products" className="mt-4 inline-block">
+                <Button>تصفح جميع المنتجات</Button>
+              </Link>
+            </div>
+          )}
 
-          <Link to="/products?featured=true" className="block sm:hidden mt-4">
+          <Link to="/products" className="block sm:hidden mt-4">
             <Button variant="outline" className="w-full">عرض جميع المنتجات</Button>
           </Link>
         </div>
       </section>
 
-      {/* Why Gamelo - Mobile Optimized */}
+      {/* Why Gamelo Section */}
       <section className="bg-card border-y border-border">
         <div className="px-4 py-10 md:py-16">
           <div className="max-w-7xl mx-auto">
@@ -253,9 +332,9 @@ export default function HomePage() {
                 <div className="flex h-14 w-14 md:h-16 md:w-16 mx-auto items-center justify-center rounded-2xl bg-green-500/10">
                   <Headphones className="h-7 w-7 md:h-8 md:w-8 text-green-500" />
                 </div>
-                <h3 className="font-heading text-lg md:text-xl font-bold">دعم متواصل</h3>
+                <h3 className="font-heading text-lg md:text-xl font-bold">دعم متميز</h3>
                 <p className="text-sm text-muted-foreground">
-                  فريق دعم متخصص متواجد 24/7 للإجابة على استفساراتك.
+                  فريق دعم متاح على مدار الساعة لمساعدتك في أي استفسار.
                 </p>
               </div>
             </div>
@@ -263,34 +342,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section - Mobile Optimized */}
-      <section className="px-4 py-10 md:py-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-l from-primary to-accent p-6 md:p-8 lg:p-12 text-center">
-            <div className="relative z-10 max-w-2xl mx-auto space-y-4 md:space-y-6">
-              <h2 className="font-heading text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white">
-                جاهز للبدء؟
-              </h2>
-              <p className="text-white/80 text-sm md:text-base lg:text-lg">
-                أنشئ حسابك الآن واحصل على خصم 10% على أول عملية شراء
-                <br className="hidden sm:block" />
-                <span className="font-bold">استخدم كود: WELCOME10</span>
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link to="/register" className="w-full sm:w-auto">
-                  <Button size="lg" variant="secondary" className="w-full sm:w-auto gap-2 h-12 px-8">
-                    إنشاء حساب مجاني
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            
-            {/* Background decoration */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-white rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-48 md:w-64 h-48 md:h-64 bg-white rounded-full blur-3xl" />
-            </div>
+      {/* CTA Section */}
+      <section className="px-4 py-16 md:py-24">
+        <div className="max-w-4xl mx-auto text-center">
+          <Star className="h-12 w-12 mx-auto mb-4 text-primary" />
+          <h2 className="font-heading text-2xl md:text-3xl lg:text-4xl font-bold mb-4">
+            انضم لآلاف العملاء السعداء
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+            ابدأ التسوق الآن واستمتع بأفضل أسعار بطاقات الألعاب الرقمية مع توصيل فوري ودعم متميز
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/products">
+              <Button size="lg" className="gap-2 h-12 px-8">
+                تصفح المنتجات
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/register">
+              <Button size="lg" variant="outline" className="gap-2 h-12 px-8">
+                إنشاء حساب مجاني
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
