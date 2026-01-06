@@ -32,7 +32,7 @@ export const formatDateShort = (dateString) => {
   }).format(date);
 };
 
-export const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
+export const API_URL = `${import.meta.env.VITE_API_URL || 'http://72.62.149.153'}/api`;
 
 export const getAuthHeader = () => {
   const token = localStorage.getItem("token");
