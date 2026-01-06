@@ -118,6 +118,29 @@ export default function OrdersPage() {
   };
 
   const getStatusBadge = (order) => {
+    const productType = order.product_type || "digital_code";
+    
+    // For account products
+    if (productType === "existing_account" || productType === "new_account") {
+      if (order.status === "delivered") {
+        return (
+          <Badge className="bg-green-500">
+            <CheckCircle className="h-3 w-3 ml-1" />
+            تم التسليم
+          </Badge>
+        );
+      }
+      if (order.status === "awaiting_admin") {
+        return (
+          <Badge className="bg-orange-500">
+            <Clock className="h-3 w-3 ml-1" />
+            قيد التنفيذ
+          </Badge>
+        );
+      }
+    }
+    
+    // For digital codes
     if (order.revealed_at) {
       return (
         <Badge className="bg-green-500">
@@ -131,6 +154,14 @@ export default function OrdersPage() {
         <Badge className="bg-accent">
           <Clock className="h-3 w-3 ml-1" />
           جاهز للكشف
+        </Badge>
+      );
+    }
+    if (order.status === "refunded") {
+      return (
+        <Badge variant="destructive">
+          <AlertTriangle className="h-3 w-3 ml-1" />
+          مسترد
         </Badge>
       );
     }
