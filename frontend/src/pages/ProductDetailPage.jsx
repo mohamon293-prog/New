@@ -199,12 +199,12 @@ export default function ProductDetailPage() {
   const originalPrice = getOriginalPrice();
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
+  const productType = product.product_type || "digital_code";
   const stockCount = selectedVariant?.stock_count ?? product.stock_count;
   const isLowStock = stockCount > 0 && stockCount <= 10;
   // For account types, stock doesn't matter - they are fulfilled manually
   const isOutOfStock = productType === "digital_code" && stockCount === 0;
 
-  const productType = product.product_type || "digital_code";
   const typeLabels = {
     digital_code: { label: "كود رقمي", icon: "🔑", color: "bg-blue-500" },
     existing_account: { label: "حساب جاهز", icon: "👤", color: "bg-purple-500" },
