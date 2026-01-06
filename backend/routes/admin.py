@@ -447,3 +447,48 @@ async def get_online_users(admin: dict = Depends(get_admin_user)):
     ).to_list(100)
     
     return {"online_users": online_users, "count": len(online_users)}
+
+
+
+# Reset Analytics
+@router.delete("/analytics/reset")
+async def reset_analytics(
+    period: str = "all",
+    admin: dict = Depends(get_admin_user)
+):
+    """Reset analytics data"""
+    if admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح لك بهذه العملية")
+    
+    now = datetime.now(timezone.utc)
+    
+    if period == "today":
+        cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "week":
+        cutoff = now - timedelta(days=7)
+    elif period == "month":
+        cutoff = now - timedelta(days=30)
+    else:
+        cutoff = None
+    
+    deleted_count = 0
+    
+    if cutoff:
+        # Delete orders from the period
+        result = await db.orders.delete_many({"created_at": {"$gte": cutoff.isoformat()}})
+        deleted_count += result.deleted_count
+        
+        # Delete wallet transactions from the period
+        await db.wallet_transactions.delete_many({"created_at": {"$gte": cutoff.isoformat()}})
+    else:
+        # Delete all orders and reset
+        result = await db.orders.delete_many({})
+        deleted_count = result.deleted_count
+        
+        await db.wallet_transactions.delete_many({})
+        await db.audit_logs.delete_many({})
+    
+    return {
+        "message": f"تم مسح التحليلات بنجاح",
+        "deleted_orders": deleted_count
+    }
