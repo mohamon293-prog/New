@@ -40,8 +40,10 @@ export const ProductCard = ({ product }) => {
     });
   };
 
+  const productType = product.product_type || "digital_code";
   const isLowStock = product.stock_count > 0 && product.stock_count <= 10;
-  const isOutOfStock = product.stock_count === 0;
+  // For account types, stock doesn't matter - they are fulfilled manually
+  const isOutOfStock = productType === "digital_code" && product.stock_count === 0;
 
   return (
     <Link
