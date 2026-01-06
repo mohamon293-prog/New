@@ -201,7 +201,8 @@ export default function ProductDetailPage() {
 
   const stockCount = selectedVariant?.stock_count ?? product.stock_count;
   const isLowStock = stockCount > 0 && stockCount <= 10;
-  const isOutOfStock = stockCount === 0;
+  // For account types, stock doesn't matter - they are fulfilled manually
+  const isOutOfStock = productType === "digital_code" && stockCount === 0;
 
   const productType = product.product_type || "digital_code";
   const typeLabels = {
