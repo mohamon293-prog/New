@@ -174,8 +174,8 @@ const OrdersManagement = () => {
                   <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setNewStatus(order.status); }}>
                     <Edit className="h-4 w-4 ml-1" /> تعديل
                   </Button>
-                  {order.product_type && order.product_type !== "code" && order.status !== "delivered" && (
-                    <Button size="sm" onClick={() => setDeliveryDialog(order)}>
+                  {(order.product_type === "existing_account" || order.product_type === "new_account") && order.status !== "delivered" && (
+                    <Button size="sm" className="bg-green-500 hover:bg-green-600" onClick={() => setDeliveryDialog(order)}>
                       <Send className="h-4 w-4 ml-1" /> تسليم
                     </Button>
                   )}
