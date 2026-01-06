@@ -232,6 +232,9 @@ class OrderResponse(BaseModel):
     codes: Optional[List[str]] = None
     revealed_at: Optional[str] = None
     order_number: Optional[str] = None
+    product_type: Optional[str] = "digital_code"
+    delivery_data: Optional[Dict] = None
+    customer_details: Optional[Dict] = None
 
 
 # Wallet Models
