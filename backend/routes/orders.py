@@ -75,9 +75,15 @@ async def notify_new_order(order: dict, user: dict):
 @router.post("/orders", response_model=OrderResponse)
 async def create_order(order: OrderCreate, user: dict = Depends(get_current_user)):
     """Create a new order"""
+    # Try to find by ID first, then by slug
     product = await db.products.find_one({"id": order.product_id, "is_active": True})
     if not product:
+        product = await db.products.find_one({"slug": order.product_id, "is_active": True})
+    if not product:
         raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    
+    # Use the actual product ID for further operations
+    actual_product_id = product["id"]
     
     # Determine price based on variant
     if order.variant_id and product.get("variants"):
