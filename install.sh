@@ -1,341 +1,443 @@
 #!/bin/bash
-
-###############################################
-#                                             #
-#   GAMELO - التثبيت التلقائي الكامل          #
-#      Hostinger VPS - Ubuntu 22.04           #
-#              الإصدار 3.0                    #
-#                                             #
-###############################################
+###########################################
+# Gamelo - Complete Installation Script
+# For Ubuntu 22.04 VPS (Hostinger KVM)
+###########################################
 
 set -e
 
-# التحقق من root
-if [ "$EUID" -ne 0 ]; then
-    echo "يجب تشغيل السكريبت بصلاحيات root"
-    echo "استخدم: sudo ./install.sh"
-    exit 1
-fi
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-clear
-echo ""
-echo "========================================================"
-echo "         GAMELO AUTO INSTALLER v3.0                     "
-echo "            Hostinger VPS Edition                       "
-echo "========================================================"
-echo ""
+log() { echo -e "${GREEN}[✓]${NC} $1"; }
+warn() { echo -e "${YELLOW}[!]${NC} $1"; }
+error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+info() { echo -e "${BLUE}[i]${NC} $1"; }
 
-# إدخال المعلومات
-echo "========================================================"
-echo "                 أدخل المعلومات المطلوبة               "
-echo "========================================================"
-echo ""
-
-read -p "أدخل الدومين (مثال: gamelo.org): " DOMAIN
-read -p "أدخل البريد الإلكتروني: " EMAIL
-
-DOMAIN=$(echo "$DOMAIN" | sed 's|https://||g' | sed 's|http://||g' | sed 's|/||g' | sed 's|www.||g')
+# Configuration
+DOMAIN="${1:-gamelo.org}"
+SERVER_IP="${2:-$(curl -s ifconfig.me)}"
+REPO_URL="https://github.com/mohamon293-prog/New.git"
+APP_DIR="/var/www/gamelo"
+DB_NAME="gamelo_db"
 
 echo ""
-echo "========================================================"
-echo "  الدومين: $DOMAIN"
-echo "  البريد: $EMAIL"
-echo "========================================================"
+echo "==========================================="
+echo "       Gamelo Installation Script"
+echo "==========================================="
+echo ""
+info "Domain: $DOMAIN"
+info "Server IP: $SERVER_IP"
 echo ""
 
-read -p "هل المعلومات صحيحة؟ (y/n): " CONFIRM
-if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
-    echo "تم الإلغاء"
-    exit 0
-fi
+###########################################
+# 1. System Update & Dependencies
+###########################################
+log "Updating system packages..."
+apt update && apt upgrade -y
 
-echo ""
-echo "========================================================"
-echo "              بدء التثبيت الشامل...                     "
-echo "========================================================"
-echo ""
+log "Installing essential packages..."
+apt install -y curl wget git nginx python3 python3-pip python3-venv supervisor certbot python3-certbot-nginx gnupg
 
-# 1. حذف التثبيت القديم
-echo "[1/15] حذف التثبيت القديم..."
-supervisorctl stop gamelo 2>/dev/null || true
-rm -rf /var/www/gamelo
-rm -f /etc/supervisor/conf.d/gamelo.conf
-rm -f /etc/nginx/sites-enabled/gamelo
-rm -f /etc/nginx/sites-available/gamelo
-systemctl restart nginx 2>/dev/null || true
-echo ">>> تم"
-
-# 2. تحديث النظام
-echo "[2/15] تحديث النظام..."
-apt update -y > /dev/null 2>&1
-apt upgrade -y > /dev/null 2>&1
-apt install -y curl wget git build-essential software-properties-common ufw nano htop > /dev/null 2>&1
-echo ">>> تم"
-
-# 3. إضافة Swap
-echo "[3/15] إضافة Swap Memory (4GB)..."
-if [ ! -f /swapfile ]; then
-    fallocate -l 4G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=4096 status=none
-    chmod 600 /swapfile
-    mkswap /swapfile > /dev/null 2>&1
-    swapon /swapfile 2>/dev/null || true
-    grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-fi
-swapon /swapfile 2>/dev/null || true
-echo ">>> تم"
-
-# 4. Python 3.11
-echo "[4/15] تثبيت Python 3.11..."
-add-apt-repository ppa:deadsnakes/ppa -y > /dev/null 2>&1
-apt update -y > /dev/null 2>&1
-apt install -y python3.11 python3.11-venv python3.11-dev python3-pip > /dev/null 2>&1
-echo ">>> تم"
-
-# 5. Node.js 20
-echo "[5/15] تثبيت Node.js 20..."
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null 2>&1
-apt install -y nodejs > /dev/null 2>&1
-echo ">>> تم"
-
-# 6. MongoDB 7
-echo "[6/15] تثبيت MongoDB 7..."
+###########################################
+# 2. MongoDB Installation
+###########################################
 if ! command -v mongod &> /dev/null; then
-    curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor 2>/dev/null
-    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list > /dev/null
-    apt update -y > /dev/null 2>&1
-    apt install -y mongodb-org > /dev/null 2>&1
+    log "Installing MongoDB 7.0..."
+    curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+    echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-7.0.list
+    apt update
+    apt install -y mongodb-org
+    systemctl enable mongod
+    systemctl start mongod
+    sleep 3
+else
+    log "MongoDB already installed"
 fi
-systemctl start mongod 2>/dev/null || true
-systemctl enable mongod > /dev/null 2>&1
-echo ">>> تم"
 
-# 7. Nginx و Supervisor
-echo "[7/15] تثبيت Nginx و Supervisor..."
-apt install -y nginx supervisor certbot python3-certbot-nginx > /dev/null 2>&1
-systemctl start nginx 2>/dev/null || true
-systemctl enable nginx > /dev/null 2>&1
-systemctl start supervisor 2>/dev/null || true
-systemctl enable supervisor > /dev/null 2>&1
-echo ">>> تم"
+# Verify MongoDB
+mongod --version || error "MongoDB installation failed"
+log "MongoDB is running"
 
-# 8. تحميل المشروع
-echo "[8/15] تحميل المشروع من GitHub..."
-mkdir -p /var/www/gamelo
-cd /var/www/gamelo
-git clone https://github.com/mohamon293-prog/New.git . > /dev/null 2>&1 || {
-    echo "فشل تحميل المشروع"
-    echo "تأكد أن الـ Repository عام (Public)"
-    exit 1
-}
-echo ">>> تم"
+###########################################
+# 3. Clone Repository
+###########################################
+log "Setting up application directory..."
+rm -rf $APP_DIR
+mkdir -p $APP_DIR
+cd $APP_DIR
 
-# 9. إعداد Backend
-echo "[9/15] إعداد Backend..."
-cd /var/www/gamelo/backend
+log "Cloning repository..."
+git clone $REPO_URL .
+git config --global --add safe.directory $APP_DIR
 
-python3.11 -m venv venv
+###########################################
+# 4. Backend Setup
+###########################################
+log "Setting up Python backend..."
+cd $APP_DIR/backend
+
+# Create virtual environment
+python3 -m venv venv
 source venv/bin/activate
 
-pip install --upgrade pip > /dev/null 2>&1
-pip install -r requirements.txt > /dev/null 2>&1
-pip install httpx aiohttp > /dev/null 2>&1
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
 
-JWT_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "")
-
+# Create .env file
 cat > .env << EOF
 MONGO_URL=mongodb://localhost:27017
-DB_NAME=gamelo_db
-JWT_SECRET=$JWT_KEY
+DB_NAME=$DB_NAME
+JWT_SECRET=$(openssl rand -hex 32)
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=24
-FERNET_KEY=$FERNET_KEY
+FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 EOF
 
-mkdir -p uploads/products uploads/banners uploads/categories
-chmod -R 755 uploads
-deactivate
-echo ">>> تم"
+log "Backend configured"
 
-# 10. إعداد Frontend
-echo "[10/15] إعداد Frontend (قد يستغرق 3-5 دقائق)..."
-cd /var/www/gamelo/frontend
+###########################################
+# 5. Frontend Setup
+###########################################
+log "Setting up frontend..."
+cd $APP_DIR/frontend
 
+# Create .env file with server IP
 cat > .env << EOF
-REACT_APP_BACKEND_URL=http://$DOMAIN
+VITE_API_URL=http://$SERVER_IP
 EOF
 
-npm install > /dev/null 2>&1
-npm run build > /dev/null 2>&1
-
-if [ ! -f "build/index.html" ]; then
-    echo "فشل بناء Frontend"
-    exit 1
+# The build folder is already in Git - no need to build
+if [ -d "build" ] && [ -f "build/index.html" ]; then
+    log "Frontend build found in repository"
+else
+    warn "Frontend build not found - will need manual build"
 fi
-echo ">>> تم"
 
-# 11. Supervisor
-echo "[11/15] إعداد Supervisor..."
-mkdir -p /var/log/gamelo
+###########################################
+# 6. Create uploads directory
+###########################################
+mkdir -p $APP_DIR/backend/uploads/images
+chown -R www-data:www-data $APP_DIR
 
-cat > /etc/supervisor/conf.d/gamelo.conf << 'EOF'
-[program:gamelo]
-command=/var/www/gamelo/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001
-directory=/var/www/gamelo/backend
+###########################################
+# 7. Supervisor Configuration
+###########################################
+log "Configuring Supervisor..."
+cat > /etc/supervisor/conf.d/gamelo-backend.conf << EOF
+[program:gamelo-backend]
+command=$APP_DIR/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001
+directory=$APP_DIR/backend
 user=www-data
 autostart=true
 autorestart=true
-stderr_logfile=/var/log/gamelo/error.log
-stdout_logfile=/var/log/gamelo/access.log
+stderr_logfile=/var/log/supervisor/gamelo-backend.err.log
+stdout_logfile=/var/log/supervisor/gamelo-backend.out.log
+environment=PATH="$APP_DIR/backend/venv/bin"
 EOF
 
-chown -R www-data:www-data /var/www/gamelo
-chown -R www-data:www-data /var/log/gamelo
-supervisorctl reread > /dev/null 2>&1
-supervisorctl update > /dev/null 2>&1
-supervisorctl restart gamelo > /dev/null 2>&1 || supervisorctl start gamelo > /dev/null 2>&1
+supervisorctl reread
+supervisorctl update
 sleep 3
-echo ">>> تم"
+supervisorctl restart gamelo-backend
+log "Backend service configured"
 
-# 12. Nginx
-echo "[12/15] إعداد Nginx..."
+###########################################
+# 8. Nginx Configuration
+###########################################
+log "Configuring Nginx..."
 cat > /etc/nginx/sites-available/gamelo << EOF
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    server_name $DOMAIN www.$DOMAIN $SERVER_IP _;
     
-    root /var/www/gamelo/frontend/build;
+    root $APP_DIR/frontend/build;
     index index.html;
     client_max_body_size 100M;
     
+    # API proxy
     location /api/ {
         proxy_pass http://127.0.0.1:8001/api/;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
         proxy_read_timeout 300;
+        proxy_connect_timeout 300;
     }
     
+    # Uploads
     location /uploads/ {
-        alias /var/www/gamelo/backend/uploads/;
+        alias $APP_DIR/backend/uploads/;
     }
     
+    # Frontend SPA
     location / {
         try_files \$uri \$uri/ /index.html;
     }
 }
 EOF
 
-ln -sf /etc/nginx/sites-available/gamelo /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
-nginx -t > /dev/null 2>&1
-systemctl restart nginx
-echo ">>> تم"
+ln -sf /etc/nginx/sites-available/gamelo /etc/nginx/sites-enabled/
+nginx -t && systemctl restart nginx
+log "Nginx configured"
 
-# 13. Firewall
-echo "[13/15] إعداد Firewall..."
-ufw allow ssh > /dev/null 2>&1
-ufw allow 'Nginx Full' > /dev/null 2>&1
-ufw --force enable > /dev/null 2>&1
-echo ">>> تم"
+###########################################
+# 9. Initialize Database with Sample Data
+###########################################
+log "Initializing database..."
 
-# 14. SSL
-echo "[14/15] محاولة الحصول على SSL..."
-certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $EMAIL > /dev/null 2>&1 && {
-    cat > /var/www/gamelo/frontend/.env << EOF
-REACT_APP_BACKEND_URL=https://$DOMAIN
-EOF
-    cd /var/www/gamelo/frontend
-    npm run build > /dev/null 2>&1
-    echo ">>> تم تفعيل HTTPS"
-} || {
-    echo ">>> SSL غير متاح - الموقع يعمل على HTTP"
-}
+# Create admin user
+mongosh $DB_NAME --eval '
+db.users.deleteMany({email: "admin@gamelo.com"});
+db.users.insertOne({
+  "id": "admin-001",
+  "email": "admin@gamelo.com",
+  "password_hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G0r7RqECY8XYMO",
+  "name": "مدير النظام",
+  "phone": "",
+  "role": "admin",
+  "role_level": 100,
+  "permissions": [],
+  "is_active": true,
+  "is_approved": true,
+  "wallet_balance": 0,
+  "wallet_balance_jod": 0,
+  "wallet_balance_usd": 0,
+  "created_at": new Date().toISOString(),
+  "updated_at": new Date().toISOString()
+});
+print("Admin user created");
+'
 
-# 15. إنشاء المسؤول
-echo "[15/15] إنشاء حساب المسؤول..."
-cd /var/www/gamelo/backend
-source venv/bin/activate
+# Create categories
+mongosh $DB_NAME --eval '
+db.categories.deleteMany({});
+db.categories.insertMany([
+  {"id":"playstation","name":"بلايستيشن","name_en":"PlayStation","slug":"playstation","image_url":"https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&q=80","description":"بطاقات وأكواد بلايستيشن","order":1,"is_active":true},
+  {"id":"xbox","name":"إكس بوكس","name_en":"Xbox","slug":"xbox","image_url":"https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=400&q=80","description":"بطاقات وأكواد إكس بوكس","order":2,"is_active":true},
+  {"id":"steam","name":"ستيم","name_en":"Steam","slug":"steam","image_url":"https://images.unsplash.com/photo-1614285457768-646f65ca8548?w=400&q=80","description":"بطاقات ستيم وألعاب PC","order":3,"is_active":true},
+  {"id":"nintendo","name":"نينتندو","name_en":"Nintendo","slug":"nintendo","image_url":"https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=400&q=80","description":"بطاقات نينتندو إي شوب","order":4,"is_active":true},
+  {"id":"giftcards","name":"بطاقات الهدايا","name_en":"Gift Cards","slug":"giftcards","image_url":"https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&q=80","description":"بطاقات هدايا متنوعة","order":5,"is_active":true},
+  {"id":"mobile","name":"ألعاب الجوال","name_en":"Mobile Games","slug":"mobile","image_url":"https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&q=80","description":"شحن ألعاب الجوال","order":6,"is_active":true}
+]);
+print("Categories created");
+'
 
-python3 << 'PYEOF'
-import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
-import bcrypt, uuid
-from datetime import datetime, timezone
+# Create sample products
+mongosh $DB_NAME --eval '
+db.products.deleteMany({});
+db.products.insertMany([
+  {
+    "id": "ps-store-10",
+    "name": "بطاقة بلايستيشن ستور $10",
+    "name_en": "PlayStation Store $10",
+    "slug": "ps-store-10",
+    "description": "بطاقة رصيد بلايستيشن ستور بقيمة 10 دولار أمريكي",
+    "category_id": "playstation",
+    "price_jod": 7.99,
+    "price_usd": 10.0,
+    "image_url": "https://placehold.co/400x400/003087/ffffff?text=PS+$10",
+    "platform": "playstation",
+    "region": "US",
+    "is_active": true,
+    "is_featured": true,
+    "product_type": "digital_code",
+    "has_variants": false,
+    "rating": 4.8,
+    "review_count": 120,
+    "sold_count": 500,
+    "stock_count": 10,
+    "created_at": new Date().toISOString(),
+    "updated_at": new Date().toISOString()
+  },
+  {
+    "id": "ps-store-25",
+    "name": "بطاقة بلايستيشن ستور $25",
+    "name_en": "PlayStation Store $25",
+    "slug": "ps-store-25",
+    "description": "بطاقة رصيد بلايستيشن ستور بقيمة 25 دولار أمريكي",
+    "category_id": "playstation",
+    "price_jod": 19.5,
+    "price_usd": 25.0,
+    "image_url": "https://placehold.co/400x400/003087/ffffff?text=PS+$25",
+    "platform": "playstation",
+    "region": "US",
+    "is_active": true,
+    "is_featured": true,
+    "product_type": "digital_code",
+    "has_variants": false,
+    "rating": 4.9,
+    "review_count": 200,
+    "sold_count": 800,
+    "stock_count": 15,
+    "created_at": new Date().toISOString(),
+    "updated_at": new Date().toISOString()
+  },
+  {
+    "id": "xbox-10",
+    "name": "بطاقة Xbox $10",
+    "name_en": "Xbox Gift Card $10",
+    "slug": "xbox-10",
+    "description": "بطاقة رصيد Xbox بقيمة 10 دولار",
+    "category_id": "xbox",
+    "price_jod": 7.99,
+    "price_usd": 10.0,
+    "image_url": "https://placehold.co/400x400/107c10/ffffff?text=Xbox+$10",
+    "platform": "xbox",
+    "region": "US",
+    "is_active": true,
+    "is_featured": true,
+    "product_type": "digital_code",
+    "has_variants": false,
+    "rating": 4.7,
+    "review_count": 90,
+    "sold_count": 400,
+    "stock_count": 12,
+    "created_at": new Date().toISOString(),
+    "updated_at": new Date().toISOString()
+  },
+  {
+    "id": "steam-20",
+    "name": "بطاقة ستيم $20",
+    "name_en": "Steam Wallet $20",
+    "slug": "steam-20",
+    "description": "بطاقة رصيد ستيم بقيمة 20 دولار",
+    "category_id": "steam",
+    "price_jod": 15.5,
+    "price_usd": 20.0,
+    "image_url": "https://placehold.co/400x400/1b2838/ffffff?text=Steam+$20",
+    "platform": "steam",
+    "region": "عالمي",
+    "is_active": true,
+    "is_featured": true,
+    "product_type": "digital_code",
+    "has_variants": false,
+    "rating": 4.8,
+    "review_count": 150,
+    "sold_count": 600,
+    "stock_count": 20,
+    "created_at": new Date().toISOString(),
+    "updated_at": new Date().toISOString()
+  },
+  {
+    "id": "pubg-660uc",
+    "name": "PUBG Mobile 660 UC",
+    "name_en": "PUBG Mobile 660 UC",
+    "slug": "pubg-660uc",
+    "description": "شحن 660 UC لعبة PUBG Mobile",
+    "category_id": "mobile",
+    "price_jod": 7.99,
+    "price_usd": 10.99,
+    "image_url": "https://placehold.co/400x400/f2a900/000000?text=PUBG+660UC",
+    "platform": "mobile",
+    "region": "عالمي",
+    "is_active": true,
+    "is_featured": true,
+    "product_type": "digital_code",
+    "has_variants": false,
+    "rating": 4.5,
+    "review_count": 300,
+    "sold_count": 1500,
+    "stock_count": 50,
+    "created_at": new Date().toISOString(),
+    "updated_at": new Date().toISOString()
+  },
+  {
+    "id": "itunes-25",
+    "name": "بطاقة آيتونز $25",
+    "name_en": "iTunes Gift Card $25",
+    "slug": "itunes-25",
+    "description": "بطاقة هدايا آيتونز بقيمة 25 دولار",
+    "category_id": "giftcards",
+    "price_jod": 18.99,
+    "price_usd": 25.0,
+    "image_url": "https://placehold.co/400x400/fb5bc5/ffffff?text=iTunes+$25",
+    "platform": "giftcards",
+    "region": "US",
+    "is_active": true,
+    "is_featured": true,
+    "product_type": "digital_code",
+    "has_variants": false,
+    "rating": 4.8,
+    "review_count": 100,
+    "sold_count": 450,
+    "stock_count": 25,
+    "created_at": new Date().toISOString(),
+    "updated_at": new Date().toISOString()
+  }
+]);
+print("Sample products created");
+'
 
-async def setup():
-    try:
-        client = AsyncIOMotorClient("mongodb://localhost:27017")
-        db = client.gamelo_db
-        now = datetime.now(timezone.utc).isoformat()
-        
-        if not await db.users.find_one({"email": "admin@gamelo.com"}):
-            await db.users.insert_one({
-                "id": str(uuid.uuid4()),
-                "email": "admin@gamelo.com",
-                "password_hash": bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode(),
-                "name": "مدير النظام", "phone": "", "role": "admin", "role_level": 100,
-                "permissions": [], "is_active": True, "is_approved": True,
-                "wallet_balance": 0.0, "wallet_balance_jod": 0.0, "wallet_balance_usd": 0.0,
-                "created_at": now, "updated_at": now
-            })
-        
-        for cid, name, name_en, order in [
-            ("playstation", "بلايستيشن", "PlayStation", 1),
-            ("xbox", "إكس بوكس", "Xbox", 2),
-            ("steam", "ستيم", "Steam", 3),
-            ("nintendo", "نينتندو", "Nintendo", 4),
-            ("mobile", "ألعاب الجوال", "Mobile", 5),
-            ("other", "أخرى", "Other", 6)
-        ]:
-            if not await db.categories.find_one({"id": cid}):
-                await db.categories.insert_one({
-                    "id": cid, "name": name, "name_en": name_en, "slug": cid,
-                    "order": order, "is_active": True, "created_at": now, "updated_at": now
-                })
-    except Exception as e:
-        print(f"Error: {e}")
+# Create indexes
+mongosh $DB_NAME --eval '
+db.users.createIndex({email: 1}, {unique: true});
+db.users.createIndex({id: 1}, {unique: true});
+db.products.createIndex({id: 1}, {unique: true});
+db.products.createIndex({slug: 1}, {unique: true});
+db.products.createIndex({category_id: 1});
+db.categories.createIndex({id: 1}, {unique: true});
+db.orders.createIndex({id: 1}, {unique: true});
+db.orders.createIndex({user_id: 1});
+db.codes.createIndex({product_id: 1, is_sold: 1});
+print("Indexes created");
+'
 
-asyncio.run(setup())
-PYEOF
+log "Database initialized with sample data"
 
-deactivate
-echo ">>> تم"
+###########################################
+# 10. Final Permissions
+###########################################
+chown -R www-data:www-data $APP_DIR
+chmod -R 755 $APP_DIR
 
-# التحقق النهائي
+###########################################
+# 11. Verify Installation
+###########################################
+log "Verifying installation..."
+sleep 3
+
+# Test backend
+HEALTH=$(curl -s http://localhost:8001/api/health 2>/dev/null || echo "failed")
+if [[ "$HEALTH" == *"healthy"* ]]; then
+    log "Backend API: OK"
+else
+    warn "Backend API: Check logs with 'tail -50 /var/log/supervisor/gamelo-backend.err.log'"
+fi
+
+# Test nginx
+if curl -s http://localhost/ | grep -q "Gamelo"; then
+    log "Frontend: OK"
+else
+    warn "Frontend: Check nginx logs"
+fi
+
 echo ""
-echo "========================================================"
-echo "                   التحقق النهائي                       "
-echo "========================================================"
+echo "==========================================="
+echo -e "${GREEN}     Installation Complete!${NC}"
+echo "==========================================="
 echo ""
-
-BACKEND_OK=$(supervisorctl status gamelo 2>/dev/null | grep -c "RUNNING" || echo "0")
-NGINX_OK=$(systemctl is-active nginx 2>/dev/null)
-MONGO_OK=$(systemctl is-active mongod 2>/dev/null)
-
-echo "  MongoDB:  $([ "$MONGO_OK" = "active" ] && echo 'يعمل' || echo 'متوقف')"
-echo "  Backend:  $([ "$BACKEND_OK" = "1" ] && echo 'يعمل' || echo 'متوقف')"
-echo "  Nginx:    $([ "$NGINX_OK" = "active" ] && echo 'يعمل' || echo 'متوقف')"
-
+echo "Access your site at:"
+echo "  - http://$SERVER_IP"
+echo "  - http://$DOMAIN (after DNS setup)"
 echo ""
-echo "========================================================"
+echo "Admin Login:"
+echo "  - Email: admin@gamelo.com"
+echo "  - Password: admin123"
 echo ""
-echo "              تم التثبيت بنجاح!                         "
+echo "Useful commands:"
+echo "  - View backend logs: tail -f /var/log/supervisor/gamelo-backend.err.log"
+echo "  - Restart backend: supervisorctl restart gamelo-backend"
+echo "  - Restart nginx: systemctl restart nginx"
 echo ""
-echo "========================================================"
-echo ""
-echo "  الموقع: http://$DOMAIN"
-echo ""
-echo "  بيانات تسجيل الدخول:"
-echo "      البريد: admin@gamelo.com"
-echo "      كلمة المرور: admin123"
-echo ""
-echo "  مهم: غيّر كلمة المرور فوراً!"
-echo ""
-echo "========================================================"
+echo "To enable HTTPS (after DNS is configured):"
+echo "  certbot --nginx -d $DOMAIN -d www.$DOMAIN"
 echo ""
