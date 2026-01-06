@@ -9,7 +9,7 @@
 /coverage
 
 # production
-/build
+# /build  # تم تعطيله لرفع البناء المُسبق للخادم
 
 # misc
 .DS_Store
