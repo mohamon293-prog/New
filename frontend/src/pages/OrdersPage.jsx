@@ -273,17 +273,74 @@ export default function OrdersPage() {
                 ))}
               </div>
 
+              {/* Account Delivery Info */}
+              {(order.product_type === "existing_account" || order.product_type === "new_account") && order.delivery_data && (
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 mt-4">
+                  <h4 className="font-bold text-green-500 mb-3 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    تم تنفيذ طلبك بنجاح!
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {order.delivery_data.email && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">البريد الإلكتروني:</span>
+                        <span className="font-mono" dir="ltr">{order.delivery_data.email}</span>
+                      </div>
+                    )}
+                    {order.delivery_data.password && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">كلمة المرور:</span>
+                        <span className="font-mono" dir="ltr">{order.delivery_data.password}</span>
+                      </div>
+                    )}
+                    {order.delivery_data.subscription_end && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">تاريخ انتهاء الاشتراك:</span>
+                        <span className="font-bold text-green-500">{order.delivery_data.subscription_end}</span>
+                      </div>
+                    )}
+                    {order.delivery_data.notes && (
+                      <div className="mt-2 p-2 bg-secondary rounded">
+                        <span className="text-muted-foreground">ملاحظات: </span>
+                        <span>{order.delivery_data.notes}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Awaiting Admin Notice */}
+              {(order.product_type === "existing_account" || order.product_type === "new_account") && order.status === "awaiting_admin" && (
+                <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30 mt-4">
+                  <h4 className="font-bold text-orange-500 mb-2 flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    طلبك قيد التنفيذ
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    سيتم تنفيذ طلبك وإرسال بيانات الحساب خلال ساعتين كحد أقصى. ستصلك إشعار عند اكتمال الطلب.
+                  </p>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex justify-end pt-4 border-t border-border">
-                <Button
-                  variant={order.revealed_at ? "outline" : "default"}
-                  className="gap-2"
-                  onClick={() => handleRevealCodes(order)}
-                  data-testid={`reveal-codes-${order.id}`}
-                >
-                  <Eye className="h-4 w-4" />
-                  {order.revealed_at ? "عرض الأكواد" : "كشف الأكواد"}
-                </Button>
+                {order.product_type === "digital_code" && (
+                  <Button
+                    variant={order.revealed_at ? "outline" : "default"}
+                    className="gap-2"
+                    onClick={() => handleRevealCodes(order)}
+                    data-testid={`reveal-codes-${order.id}`}
+                  >
+                    <Eye className="h-4 w-4" />
+                    {order.revealed_at ? "عرض الأكواد" : "كشف الأكواد"}
+                  </Button>
+                )}
+                {(order.product_type === "existing_account" || order.product_type === "new_account") && order.status === "delivered" && (
+                  <Badge className="bg-green-500 px-4 py-2">
+                    <CheckCircle className="h-4 w-4 ml-2" />
+                    تم التسليم
+                  </Badge>
+                )}
               </div>
             </div>
           ))}
