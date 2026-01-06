@@ -34,11 +34,15 @@ export default function WalletPage() {
         axios.get(`${API_URL}/wallet/transactions`, { headers: getAuthHeader() }),
       ]);
       
-      setBalance(balanceRes.data);
-      setTransactions(txRes.data);
+      setBalance({
+        jod: balanceRes.data.balance_jod || balanceRes.data.balance || 0,
+        usd: balanceRes.data.balance_usd || 0
+      });
+      setTransactions(txRes.data || []);
     } catch (error) {
       console.error("Failed to fetch wallet data:", error);
-      toast.error("فشل في تحميل بيانات المحفظة");
+      // Don't show error toast, just use default values
+      setBalance({ jod: user?.wallet_balance_jod || user?.wallet_balance || 0, usd: user?.wallet_balance_usd || 0 });
     } finally {
       setLoading(false);
     }
