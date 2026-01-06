@@ -301,12 +301,16 @@ export default function ProductDetailPage() {
 
             {/* Stock Status */}
             <div className="flex items-center gap-2">
-              {isOutOfStock ? (
-                <Badge variant="destructive">نفذت الكمية</Badge>
-              ) : isLowStock ? (
-                <Badge className="bg-orange-500">متبقي {stockCount} فقط</Badge>
+              {productType === "digital_code" ? (
+                isOutOfStock ? (
+                  <Badge variant="destructive">نفذت الكمية</Badge>
+                ) : isLowStock ? (
+                  <Badge className="bg-orange-500">متبقي {stockCount} فقط</Badge>
+                ) : (
+                  <Badge className="bg-green-500"><Check className="h-3 w-3 ml-1" />متوفر ({stockCount})</Badge>
+                )
               ) : (
-                <Badge className="bg-green-500"><Check className="h-3 w-3 ml-1" />متوفر ({stockCount})</Badge>
+                <Badge className="bg-green-500"><Check className="h-3 w-3 ml-1" />متوفر - تسليم خلال ساعتين</Badge>
               )}
             </div>
 
