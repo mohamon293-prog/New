@@ -265,6 +265,24 @@ const ProductsManagement = () => {
     }
   };
 
+  const deleteProduct = async (productId, permanent = false) => {
+    if (!confirm(permanent ? "هل أنت متأكد من حذف المنتج نهائياً؟ لا يمكن التراجع عن هذه العملية." : "هل تريد تعطيل هذا المنتج؟")) {
+      return;
+    }
+    try {
+      await axios.delete(`${API_URL}/admin/products/${productId}?permanent=${permanent}`, { headers: getAuthHeader() });
+      if (permanent) {
+        setProducts((prev) => prev.filter((p) => p.id !== productId));
+        toast.success("تم حذف المنتج نهائياً");
+      } else {
+        setProducts((prev) => prev.map((p) => p.id === productId ? { ...p, is_active: false } : p));
+        toast.success("تم تعطيل المنتج");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "فشل في حذف المنتج");
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
