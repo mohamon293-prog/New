@@ -113,7 +113,17 @@ const ProductsManagement = () => {
       resetForm();
       fetchProducts();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "حدث خطأ");
+      console.error("Create product error:", error.response?.data);
+      const errorDetail = error.response?.data?.detail;
+      let errorMessage = "حدث خطأ";
+      if (typeof errorDetail === 'string') {
+        errorMessage = errorDetail;
+      } else if (Array.isArray(errorDetail)) {
+        errorMessage = errorDetail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+      } else if (errorDetail && typeof errorDetail === 'object') {
+        errorMessage = errorDetail.msg || errorDetail.message || JSON.stringify(errorDetail);
+      }
+      toast.error(errorMessage);
     }
   };
 
