@@ -77,7 +77,8 @@ export const ProductCard = ({ product }) => {
         </div>
 
         {/* Stock Badge - Bottom */}
-        {isLowStock && (
+        {/* Stock Badge - Bottom (only for digital codes) */}
+        {productType === "digital_code" && isLowStock && (
           <div className="absolute bottom-2 right-2">
             <Badge variant="outline" className="bg-background/90 backdrop-blur-sm text-orange-500 border-orange-500/50 text-xs">
               متبقي {product.stock_count}
@@ -85,7 +86,7 @@ export const ProductCard = ({ product }) => {
           </div>
         )}
         
-        {/* Out of Stock Overlay */}
+        {/* Out of Stock Overlay (only for digital codes) */}
         {isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <Badge className="bg-destructive text-sm px-3 py-1.5">نفذت الكمية</Badge>
