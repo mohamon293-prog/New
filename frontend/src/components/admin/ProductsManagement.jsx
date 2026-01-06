@@ -329,6 +329,9 @@ const ProductsManagement = () => {
                     <Button variant="ghost" size="sm" className="h-8" onClick={() => toggleProductStatus(product.id, product.is_active)}>
                       {product.is_active ? <XCircle className="h-4 w-4 text-destructive" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
                     </Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteProduct(product.id, true)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
