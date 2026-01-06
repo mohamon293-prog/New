@@ -407,3 +407,149 @@ async def delete_category(category_id: str, admin: dict = Depends(get_admin_user
         raise HTTPException(status_code=404, detail="القسم غير موجود")
     
     return {"message": "تم حذف القسم"}
+
+
+
+# Excel Import
+@router.post("/admin/products/import/excel")
+async def import_products_excel(
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_admin_user)
+):
+    """Import products from Excel/CSV file"""
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="نوع الملف غير مدعوم. استخدم CSV أو Excel")
+    
+    try:
+        content = await file.read()
+        
+        # Handle CSV
+        if file.filename.endswith('.csv'):
+            decoded = content.decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(decoded))
+            rows = list(reader)
+        else:
+            # For Excel, we need openpyxl
+            try:
+                import openpyxl
+                from io import BytesIO
+                wb = openpyxl.load_workbook(BytesIO(content))
+                ws = wb.active
+                headers = [cell.value for cell in ws[1]]
+                rows = []
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if any(row):
+                        rows.append(dict(zip(headers, row)))
+            except ImportError:
+                raise HTTPException(status_code=400, detail="لقراءة ملفات Excel، يرجى رفع ملف CSV بدلاً منه")
+        
+        products_added = 0
+        codes_added = 0
+        errors = []
+        now = datetime.now(timezone.utc).isoformat()
+        
+        for idx, row in enumerate(rows, start=2):
+            try:
+                # Required fields
+                name = row.get('name') or row.get('الاسم')
+                if not name:
+                    errors.append(f"صف {idx}: الاسم مطلوب")
+                    continue
+                
+                category_id = row.get('category') or row.get('category_id') or row.get('القسم') or 'other'
+                price_jod = float(row.get('price_jod') or row.get('السعر') or 0)
+                price_usd = float(row.get('price_usd') or row.get('السعر_دولار') or price_jod * 1.41)
+                
+                # Generate slug
+                slug = row.get('slug') or name.lower().replace(' ', '-').replace('$', '').replace('/', '-')
+                slug = f"{slug}-{uuid.uuid4().hex[:6]}"
+                
+                product_id = str(uuid.uuid4())
+                product_type = row.get('type') or row.get('product_type') or row.get('النوع') or 'digital_code'
+                
+                product_doc = {
+                    "id": product_id,
+                    "name": name,
+                    "name_en": row.get('name_en') or row.get('الاسم_انجليزي') or name,
+                    "slug": slug,
+                    "description": row.get('description') or row.get('الوصف') or f"منتج {name}",
+                    "description_en": row.get('description_en') or None,
+                    "category_id": category_id,
+                    "price_jod": price_jod,
+                    "price_usd": price_usd,
+                    "original_price_jod": float(row.get('original_price_jod') or 0) or None,
+                    "original_price_usd": float(row.get('original_price_usd') or 0) or None,
+                    "image_url": row.get('image_url') or row.get('الصورة') or f"https://placehold.co/400x400/1a1a2e/ffffff?text={name[:10]}",
+                    "platform": row.get('platform') or row.get('المنصة') or category_id,
+                    "region": row.get('region') or row.get('المنطقة') or "عالمي",
+                    "is_active": True,
+                    "is_featured": str(row.get('is_featured') or row.get('مميز') or '').lower() in ('true', '1', 'yes', 'نعم'),
+                    "product_type": product_type,
+                    "has_variants": False,
+                    "variants": None,
+                    "requires_email": product_type == 'existing_account',
+                    "requires_password": product_type == 'existing_account',
+                    "requires_phone": product_type == 'new_account',
+                    "delivery_instructions": row.get('delivery_instructions') or row.get('تعليمات') or None,
+                    "rating": 5.0,
+                    "review_count": 0,
+                    "sold_count": 0,
+                    "stock_count": 0,
+                    "created_at": now,
+                    "updated_at": now
+                }
+                
+                await db.products.insert_one(product_doc)
+                products_added += 1
+                
+                # Add codes if provided
+                codes_str = row.get('codes') or row.get('الأكواد') or ''
+                if codes_str and product_type == 'digital_code':
+                    codes_list = str(codes_str).split('|')
+                    for code_value in codes_list:
+                        code_value = code_value.strip()
+                        if not code_value:
+                            continue
+                        
+                        encrypted = fernet.encrypt(code_value.encode()).decode()
+                        code_doc = {
+                            "id": str(uuid.uuid4()),
+                            "product_id": product_id,
+                            "code_value": encrypted,
+                            "is_sold": False,
+                            "created_at": now
+                        }
+                        await db.codes.insert_one(code_doc)
+                        codes_added += 1
+                    
+                    # Update stock count
+                    await db.products.update_one(
+                        {"id": product_id},
+                        {"$set": {"stock_count": len([c for c in codes_list if c.strip()])}}
+                    )
+                
+            except Exception as e:
+                errors.append(f"صف {idx}: {str(e)}")
+        
+        return {
+            "success": True,
+            "products_added": products_added,
+            "codes_added": codes_added,
+            "errors": errors[:10] if errors else [],
+            "message": f"تم استيراد {products_added} منتج و {codes_added} كود"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطأ في معالجة الملف: {str(e)}")
+
+
+@router.get("/admin/products/import/template")
+async def get_import_template(admin: dict = Depends(get_admin_user)):
+    """Get CSV template for product import"""
+    return {
+        "headers": ["name", "name_en", "category", "type", "price_jod", "price_usd", "image_url", "region", "codes", "description"],
+        "example_row": ["بطاقة ستيم $10", "Steam $10", "steam", "digital_code", "7.5", "10", "https://example.com/img.jpg", "عالمي", "CODE1|CODE2|CODE3", "وصف المنتج"],
+        "categories": ["playstation", "xbox", "steam", "nintendo", "mobile", "giftcards"],
+        "types": ["digital_code", "existing_account", "new_account"]
+    }
+
