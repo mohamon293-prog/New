@@ -324,7 +324,8 @@ export default function OrdersPage() {
 
               {/* Actions */}
               <div className="flex justify-end pt-4 border-t border-border">
-                {order.product_type === "digital_code" && (
+                {/* Show reveal codes button for digital codes OR if product_type is not set (backwards compatibility) */}
+                {(!order.product_type || order.product_type === "digital_code") && (
                   <Button
                     variant={order.revealed_at ? "outline" : "default"}
                     className="gap-2"
