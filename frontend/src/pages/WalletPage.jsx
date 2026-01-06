@@ -166,7 +166,7 @@ export default function WalletPage() {
                       )}
                     </div>
                     <div>
-                      <p className="font-medium">{tx.reason}</p>
+                      <p className="font-medium">{tx.description || tx.reason || "معاملة"}</p>
                       <p className="text-sm text-muted-foreground">
                         {formatDate(tx.created_at)}
                       </p>
@@ -179,10 +179,10 @@ export default function WalletPage() {
                       }`}
                     >
                       {tx.type === "credit" ? "+" : "-"}
-                      {formatPrice(Math.abs(tx.amount), tx.currency)}
+                      {formatPrice(Math.abs(tx.amount), "JOD")}
                     </div>
                     <p className="text-xs text-muted-foreground ltr-nums">
-                      الرصيد: {formatPrice(tx.balance_after, tx.currency)}
+                      الرصيد: {formatPrice(tx.balance_after || 0, "JOD")}
                     </p>
                   </div>
                 </div>
