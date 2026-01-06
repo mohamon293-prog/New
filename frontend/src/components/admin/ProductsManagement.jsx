@@ -86,20 +86,41 @@ const ProductsManagement = () => {
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
+      // Validate required fields
+      if (!productForm.name || !productForm.category_id || !productForm.price_jod || !productForm.price_usd) {
+        toast.error("يرجى ملء جميع الحقول المطلوبة");
+        return;
+      }
+      
       const data = {
-        ...productForm,
-        price_jod: parseFloat(productForm.price_jod),
-        price_usd: parseFloat(productForm.price_usd),
+        name: productForm.name,
+        name_en: productForm.name_en || productForm.name,
+        slug: productForm.slug || productForm.name.toLowerCase().replace(/\s+/g, '-'),
+        description: productForm.description || "",
+        description_en: productForm.description_en || null,
+        category_id: productForm.category_id,
+        price_jod: parseFloat(productForm.price_jod) || 0,
+        price_usd: parseFloat(productForm.price_usd) || 0,
         original_price_jod: productForm.original_price_jod ? parseFloat(productForm.original_price_jod) : null,
         original_price_usd: productForm.original_price_usd ? parseFloat(productForm.original_price_usd) : null,
-        variants: productForm.has_variants ? productForm.variants.map(v => ({
+        image_url: productForm.image_url || "https://placehold.co/400x400",
+        platform: productForm.platform || productForm.category_id,
+        region: productForm.region || "عالمي",
+        is_featured: productForm.is_featured || false,
+        product_type: productForm.product_type || "digital_code",
+        has_variants: productForm.has_variants || false,
+        variants: productForm.has_variants && productForm.variants?.length > 0 ? productForm.variants.map(v => ({
           ...v,
           id: v.id || `var_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          price_jod: parseFloat(v.price_jod),
-          price_usd: parseFloat(v.price_usd),
+          price_jod: parseFloat(v.price_jod) || 0,
+          price_usd: parseFloat(v.price_usd) || 0,
           original_price_jod: v.original_price_jod ? parseFloat(v.original_price_jod) : null,
           original_price_usd: v.original_price_usd ? parseFloat(v.original_price_usd) : null,
-        })) : null
+        })) : null,
+        requires_email: productForm.requires_email || false,
+        requires_password: productForm.requires_password || false,
+        requires_phone: productForm.requires_phone || false,
+        delivery_instructions: productForm.delivery_instructions || null
       };
       
       if (editProduct) {
