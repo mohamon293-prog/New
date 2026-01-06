@@ -7,11 +7,27 @@ import {
   Button, Input, Badge, Skeleton,
   Search, CheckCircle, XCircle
 } from "./shared";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { Wallet, Plus, Minus } from "lucide-react";
 
 const UsersManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [walletDialog, setWalletDialog] = useState(null);
+  const [walletAmount, setWalletAmount] = useState("");
+  const [walletNotes, setWalletNotes] = useState("");
+  const [walletAction, setWalletAction] = useState("credit"); // credit or deduct
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -38,9 +54,58 @@ const UsersManagement = () => {
     }
   };
 
+  const openWalletDialog = (user, action) => {
+    setWalletDialog(user);
+    setWalletAction(action);
+    setWalletAmount("");
+    setWalletNotes("");
+  };
+
+  const handleWalletAction = async () => {
+    if (!walletDialog || !walletAmount || parseFloat(walletAmount) <= 0) {
+      toast.error("يرجى إدخال مبلغ صحيح");
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const endpoint = walletAction === "credit" ? "/wallet/admin/credit" : "/wallet/admin/deduct";
+      const response = await axios.post(
+        `${API_URL}${endpoint}`,
+        {
+          user_id: walletDialog.id,
+          amount: parseFloat(walletAmount),
+          notes: walletNotes
+        },
+        { headers: getAuthHeader() }
+      );
+
+      toast.success(response.data.message);
+      
+      // Update user balance in list
+      setUsers((prev) => prev.map((u) => 
+        u.id === walletDialog.id 
+          ? { ...u, wallet_balance: response.data.new_balance, wallet_balance_jod: response.data.new_balance }
+          : u
+      ));
+      
+      setWalletDialog(null);
+    } catch (error) {
+      console.error("Wallet action error:", error);
+      toast.error(error.response?.data?.detail || "فشل في تنفيذ العملية");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const filteredUsers = users.filter(
     (user) => user.name?.toLowerCase().includes(search.toLowerCase()) || user.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const formatBalance = (user) => {
+    const balance = user.wallet_balance_jod || user.wallet_balance || 0;
+    return `${balance.toFixed(2)} د.أ`;
+  };
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -61,7 +126,7 @@ const UsersManagement = () => {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm md:text-base truncate">{user.name}</p>
                   <p className="text-xs md:text-sm text-muted-foreground truncate">{user.email}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <Badge variant="outline" className="text-xs">
                       {user.role === "admin" ? "مدير" : user.role === "support" ? "دعم فني" : user.role === "moderator" ? "مشرف" : "مشتري"}
                     </Badge>
@@ -70,16 +135,103 @@ const UsersManagement = () => {
                     ) : (
                       <Badge variant="destructive" className="text-xs">معطل</Badge>
                     )}
+                    <Badge variant="outline" className="text-xs bg-primary/10">
+                      <Wallet className="h-3 w-3 ml-1" />
+                      {formatBalance(user)}
+                    </Badge>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => toggleUserStatus(user.id, user.is_active)}>
-                  {user.is_active ? <XCircle className="h-5 w-5 text-destructive" /> : <CheckCircle className="h-5 w-5 text-green-500" />}
-                </Button>
+                <div className="flex items-center gap-1">
+                  {/* Wallet Actions */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                    onClick={() => openWalletDialog(user, "credit")}
+                    title="شحن المحفظة"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                    onClick={() => openWalletDialog(user, "deduct")}
+                    title="خصم من المحفظة"
+                  >
+                    <Minus className="h-5 w-5" />
+                  </Button>
+                  {/* Status Toggle */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9 flex-shrink-0" 
+                    onClick={() => toggleUserStatus(user.id, user.is_active)}
+                  >
+                    {user.is_active ? <XCircle className="h-5 w-5 text-destructive" /> : <CheckCircle className="h-5 w-5 text-green-500" />}
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Wallet Dialog */}
+      <Dialog open={!!walletDialog} onOpenChange={() => setWalletDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              {walletAction === "credit" ? "شحن المحفظة" : "خصم من المحفظة"}
+            </DialogTitle>
+            <DialogDescription>
+              {walletDialog && (
+                <span>
+                  المستخدم: <strong>{walletDialog.name}</strong> ({walletDialog.email})
+                  <br />
+                  الرصيد الحالي: <strong className="text-primary">{formatBalance(walletDialog)}</strong>
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>المبلغ (د.أ)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={walletAmount}
+                onChange={(e) => setWalletAmount(e.target.value)}
+                placeholder="0.00"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <Label>ملاحظات (اختياري)</Label>
+              <Textarea
+                value={walletNotes}
+                onChange={(e) => setWalletNotes(e.target.value)}
+                placeholder="سبب الشحن أو الخصم..."
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWalletDialog(null)}>إلغاء</Button>
+            <Button 
+              onClick={handleWalletAction} 
+              disabled={processing}
+              className={walletAction === "credit" ? "bg-green-500 hover:bg-green-600" : "bg-orange-500 hover:bg-orange-600"}
+            >
+              {processing ? "جاري التنفيذ..." : walletAction === "credit" ? "شحن" : "خصم"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
