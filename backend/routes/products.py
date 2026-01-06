@@ -198,17 +198,25 @@ async def update_product(
 
 
 @router.delete("/admin/products/{product_id}")
-async def delete_product(product_id: str, admin: dict = Depends(get_admin_user)):
-    """Soft delete a product"""
-    result = await db.products.update_one(
-        {"id": product_id},
-        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="المنتج غير موجود")
-    
-    return {"message": "تم حذف المنتج"}
+async def delete_product(product_id: str, permanent: bool = False, admin: dict = Depends(get_admin_user)):
+    """Delete a product (soft or permanent)"""
+    if permanent:
+        # Permanent delete
+        result = await db.products.delete_one({"id": product_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="المنتج غير موجود")
+        # Also delete associated codes
+        await db.codes.delete_many({"product_id": product_id})
+        return {"message": "تم حذف المنتج نهائياً"}
+    else:
+        # Soft delete
+        result = await db.products.update_one(
+            {"id": product_id},
+            {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="المنتج غير موجود")
+        return {"message": "تم تعطيل المنتج"}
 
 
 @router.get("/admin/products/{product_id}/codes")
