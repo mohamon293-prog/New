@@ -262,13 +262,36 @@ const OrdersManagement = () => {
             <DialogDescription>أدخل بيانات الحساب لإرسالها للعميل</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {deliveryDialog?.customer_details && (
+              <div className="p-3 rounded-lg bg-secondary/50 text-sm">
+                <p className="font-bold mb-2">بيانات العميل:</p>
+                {deliveryDialog.customer_details.email && (
+                  <div>البريد: <span dir="ltr">{deliveryDialog.customer_details.email}</span></div>
+                )}
+                {deliveryDialog.customer_details.password && (
+                  <div>كلمة المرور: <span dir="ltr">{deliveryDialog.customer_details.password}</span></div>
+                )}
+                {deliveryDialog.customer_details.phone && (
+                  <div>الهاتف: <span dir="ltr">{deliveryDialog.customer_details.phone}</span></div>
+                )}
+              </div>
+            )}
             <div>
-              <Label>البريد الإلكتروني للحساب</Label>
-              <Input value={deliveryData.email} onChange={(e) => setDeliveryData({...deliveryData, email: e.target.value})} dir="ltr" />
+              <Label>البريد الإلكتروني للحساب الجديد</Label>
+              <Input value={deliveryData.email} onChange={(e) => setDeliveryData({...deliveryData, email: e.target.value})} dir="ltr" placeholder="account@example.com" />
             </div>
             <div>
-              <Label>كلمة المرور</Label>
-              <Input value={deliveryData.password} onChange={(e) => setDeliveryData({...deliveryData, password: e.target.value})} type="text" dir="ltr" />
+              <Label>كلمة المرور الجديدة</Label>
+              <Input value={deliveryData.password} onChange={(e) => setDeliveryData({...deliveryData, password: e.target.value})} type="text" dir="ltr" placeholder="newPassword123" />
+            </div>
+            <div>
+              <Label>تاريخ انتهاء الاشتراك</Label>
+              <Input 
+                type="date" 
+                value={deliveryData.subscription_end || ""} 
+                onChange={(e) => setDeliveryData({...deliveryData, subscription_end: e.target.value})} 
+                dir="ltr" 
+              />
             </div>
             <div>
               <Label>ملاحظات إضافية</Label>
@@ -277,7 +300,7 @@ const OrdersManagement = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeliveryDialog(null)}>إلغاء</Button>
-            <Button onClick={handleDeliver} disabled={updating}>{updating ? "جاري التسليم..." : "تسليم"}</Button>
+            <Button onClick={handleDeliver} disabled={updating}>{updating ? "جاري التسليم..." : "تسليم وإشعار العميل"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
