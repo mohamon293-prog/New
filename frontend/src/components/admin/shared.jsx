@@ -113,6 +113,7 @@ export {
   List,
   Maximize,
   Minimize,
+  Megaphone,
 } from "lucide-react";
 
 // Common Order Status Labels and Colors
