@@ -130,6 +130,7 @@ const AdminDashboard = () => {
             <Route path="users" element={<UsersManagement />} />
             <Route path="wallets" element={<WalletManagement />} />
             <Route path="discounts" element={<DiscountsManagement />} />
+            <Route path="affiliates" element={<AffiliatesManagement />} />
             <Route path="notifications" element={<NotificationsManagement />} />
             <Route path="tickets" element={<TicketsManagement />} />
             <Route path="disputes" element={<DisputesManagement />} />
