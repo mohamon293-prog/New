@@ -208,6 +208,7 @@ class OrderCreate(BaseModel):
     customer_email: Optional[str] = None
     customer_password: Optional[str] = None
     customer_phone: Optional[str] = None
+    discount_code: Optional[str] = None  # Coupon code
 
 
 class OrderItem(BaseModel):
