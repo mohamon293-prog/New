@@ -34,6 +34,64 @@ def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
 
+async def send_email(to_email: str, subject: str, html_content: str) -> bool:
+    """Send email using Resend - returns True if successful"""
+    if not resend.api_key:
+        logger.warning("RESEND_API_KEY not configured - email not sent")
+        return False
+    
+    params = {
+        "from": SENDER_EMAIL,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    try:
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Email sent to {to_email}, ID: {result.get('id')}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        return False
+
+
+def get_otp_email_html(otp_code: str, action: str = "التسجيل") -> str:
+    """Generate HTML email template for OTP"""
+    return f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #0f0f0f; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #1a1a1a; border-radius: 16px; padding: 32px; border: 1px solid #333;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #a855f7; font-size: 28px; margin: 0;">Gamelo</h1>
+                <p style="color: #888; margin-top: 8px;">متجر الألعاب الرقمية</p>
+            </div>
+            
+            <h2 style="text-align: center; color: #fff; font-size: 20px; margin-bottom: 16px;">رمز التحقق - {action}</h2>
+            
+            <div style="background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+                <p style="color: #fff; margin: 0 0 8px 0; font-size: 14px;">رمز التحقق الخاص بك:</p>
+                <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #fff;">{otp_code}</div>
+            </div>
+            
+            <p style="color: #888; text-align: center; font-size: 14px;">
+                هذا الرمز صالح لمدة <strong style="color: #fff;">10 دقائق</strong> فقط.
+            </p>
+            
+            <p style="color: #666; text-align: center; font-size: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #333;">
+                إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
+
 @router.post("/register/init")
 async def init_registration(
     email: str = Body(...),
