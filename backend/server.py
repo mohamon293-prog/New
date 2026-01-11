@@ -55,6 +55,7 @@ from routes.disputes import router as disputes_router
 from routes.discounts import router as discounts_router
 from routes.cms import router as cms_router
 from routes.wallet import router as wallet_router
+from routes.affiliates import router as affiliates_router
 
 # Import models and utils
 from models.schemas import (
