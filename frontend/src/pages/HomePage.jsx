@@ -64,11 +64,11 @@ export default function HomePage() {
     try {
       // Fetch categories
       const catResponse = await axios.get(`${API_URL}/categories`);
-      setCategories(catResponse.data);
+      setCategories(Array.isArray(catResponse.data) ? catResponse.data : []);
 
       // Fetch featured products
       const prodResponse = await axios.get(`${API_URL}/products?featured=true&limit=8`);
-      setFeaturedProducts(prodResponse.data);
+      setFeaturedProducts(Array.isArray(prodResponse.data) ? prodResponse.data : []);
       
       // Try to fetch stats
       try {
@@ -86,6 +86,8 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("Failed to fetch homepage data:", error);
+      setCategories([]);
+      setFeaturedProducts([]);
     } finally {
       setLoading(false);
     }
