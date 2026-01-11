@@ -15,6 +15,7 @@ export { default as OrdersManagement } from './OrdersManagement';
 // Financial
 export { default as WalletManagement } from './WalletManagement';
 export { default as DiscountsManagement } from './DiscountsManagement';
+export { default as AffiliatesManagement } from './AffiliatesManagement';
 
 // Communication
 export { default as NotificationsManagement } from './NotificationsManagement';
