@@ -41,6 +41,12 @@ async def create_discount_code(discount: DiscountCodeCreate, admin: dict = Depen
         "applicable_categories": discount.applicable_categories,
         "first_purchase_only": discount.first_purchase_only,
         "requires_min_items": discount.requires_min_items,
+        # Affiliate fields
+        "is_affiliate_coupon": discount.is_affiliate_coupon,
+        "affiliate_id": discount.affiliate_id,
+        "affiliate_name": discount.affiliate_name,
+        "commission_type": discount.commission_type,
+        "commission_value": discount.commission_value,
         "is_active": True,
         "created_by": admin["id"],
         "created_at": now,
@@ -52,9 +58,16 @@ async def create_discount_code(discount: DiscountCodeCreate, admin: dict = Depen
 
 
 @router.get("/admin/discounts")
-async def get_all_discounts(admin: dict = Depends(get_admin_user)):
+async def get_all_discounts(
+    affiliate_only: bool = False,
+    admin: dict = Depends(get_admin_user)
+):
     """Get all discount codes with usage stats"""
-    discounts = await db.discount_codes.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    query = {}
+    if affiliate_only:
+        query["is_affiliate_coupon"] = True
+    
+    discounts = await db.discount_codes.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
     
     for d in discounts:
         d.setdefault("name", d.get("code", ""))
@@ -63,6 +76,29 @@ async def get_all_discounts(admin: dict = Depends(get_admin_user)):
         d.setdefault("max_uses_per_user", 1)
         d.setdefault("first_purchase_only", False)
         d.setdefault("requires_min_items", 0)
+        d.setdefault("is_affiliate_coupon", False)
+        d.setdefault("affiliate_id", None)
+        d.setdefault("affiliate_name", None)
+        d.setdefault("commission_type", "percentage")
+        d.setdefault("commission_value", 0)
+        
+        # Get affiliate stats if applicable
+        if d.get("is_affiliate_coupon"):
+            usage_stats = await db.discount_usage.aggregate([
+                {"$match": {"discount_id": d["id"]}},
+                {"$group": {
+                    "_id": None,
+                    "total_sales": {"$sum": "$order_total"},
+                    "total_commission": {"$sum": "$affiliate_commission"}
+                }}
+            ]).to_list(1)
+            
+            if usage_stats:
+                d["total_sales"] = usage_stats[0].get("total_sales", 0)
+                d["total_commission"] = usage_stats[0].get("total_commission", 0)
+            else:
+                d["total_sales"] = 0
+                d["total_commission"] = 0
     
     return discounts
 
