@@ -77,6 +77,7 @@ api_router.include_router(disputes_router)
 api_router.include_router(discounts_router)
 api_router.include_router(cms_router)
 api_router.include_router(wallet_router)
+api_router.include_router(affiliates_router)
 
 
 # ==================== WALLET ENDPOINTS ====================
