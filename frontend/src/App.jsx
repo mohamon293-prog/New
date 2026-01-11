@@ -11,6 +11,7 @@ import ProductDetailPage from "./pages/ProductDetailPage.jsx";
 import CartPage from "./pages/CartPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import WalletPage from "./pages/WalletPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
@@ -82,6 +83,7 @@ function AppRoutes() {
       <Route path="/cart" element={<Layout><CartPage /></Layout>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       
       {/* Legal Pages */}
       <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
