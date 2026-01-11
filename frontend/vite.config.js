@@ -26,6 +26,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    allowedHosts: ['code-accounts-fix.preview.emergentagent.com', 'localhost', '127.0.0.1'],
   },
   preview: {
     port: 3000,
