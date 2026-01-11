@@ -36,14 +36,15 @@ export const formatDateShort = (dateString) => {
 
 // Auto-detect protocol (HTTP/HTTPS) based on current page
 const getBaseUrl = () => {
-  // Use VITE_API_URL if defined (for production deployment)
+  // Use VITE_API_URL if defined
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
-    return envUrl;
+    // Remove trailing slash if present
+    return envUrl.replace(/\/$/, '');
   }
-  // In browser without env var, use relative URLs
+  // Fallback to current origin for relative URLs
   if (typeof window !== 'undefined') {
-    return '';  // Use relative URLs - Nginx will proxy /api to backend
+    return window.location.origin;
   }
   return '';
 };
