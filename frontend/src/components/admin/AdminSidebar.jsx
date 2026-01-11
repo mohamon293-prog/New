@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, Package, Tag, ShoppingCart, MessageSquare,
   Users, Wallet, Bell, Eye, Send, Settings, Home, LogOut,
-  Gamepad2, Image, LayoutGrid, FileSpreadsheet
+  Gamepad2, Image, LayoutGrid, FileSpreadsheet, Megaphone
 } from "./shared";
 
 const menuItems = [
@@ -22,6 +22,7 @@ const menuItems = [
   { icon: Users, label: "المستخدمين", path: "/admin/users" },
   { icon: Wallet, label: "المحافظ", path: "/admin/wallets" },
   { icon: Tag, label: "أكواد الخصم", path: "/admin/discounts" },
+  { icon: Megaphone, label: "المسوقون", path: "/admin/affiliates" },
   { icon: Bell, label: "الإشعارات", path: "/admin/notifications" },
   { icon: Eye, label: "التحليلات", path: "/admin/analytics" },
   { icon: Eye, label: "سجل النشاطات", path: "/admin/audit" },
