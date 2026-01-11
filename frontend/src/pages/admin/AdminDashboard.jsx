@@ -21,6 +21,7 @@ import {
   OrdersManagement,
   WalletManagement,
   DiscountsManagement,
+  AffiliatesManagement,
   NotificationsManagement,
   TicketsManagement,
   DisputesManagement,
