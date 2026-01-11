@@ -7,12 +7,13 @@ export function cn(...inputs) {
 
 export const formatPrice = (price, currency = "JOD") => {
   if (currency === "JOD") {
-    return `${price.toFixed(2)} د.أ`;
+    return `${price?.toFixed?.(2) || '0.00'} د.أ`;
   }
-  return `$${price.toFixed(2)}`;
+  return `$${price?.toFixed?.(2) || '0.00'}`;
 };
 
 export const formatDate = (dateString) => {
+  if (!dateString) return "";
   const date = new Date(dateString);
   return new Intl.DateTimeFormat("ar-JO", {
     year: "numeric",
@@ -24,6 +25,7 @@ export const formatDate = (dateString) => {
 };
 
 export const formatDateShort = (dateString) => {
+  if (!dateString) return "";
   const date = new Date(dateString);
   return new Intl.DateTimeFormat("ar-JO", {
     year: "numeric",
