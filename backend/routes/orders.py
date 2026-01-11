@@ -156,10 +156,14 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
     
     await db.orders.insert_one(order_doc)
     
-    # Deduct from wallet
+    # Deduct from wallet (both fields for compatibility)
     await db.users.update_one(
         {"id": user["id"]},
-        {"$inc": {"wallet_balance": -total_jod}}
+        {"$inc": {
+            "wallet_balance": -total_jod,
+            "wallet_balance_jod": -total_jod,
+            "wallet_balance_usd": -total_usd
+        }}
     )
     
     # Mark codes as sold
@@ -176,6 +180,7 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
         "amount": -total_jod,
         "type": "purchase",
         "description": f"شراء {product['name']}",
+        "balance_after": user.get("wallet_balance", 0) - total_jod,
         "reference_id": order_id,
         "created_at": now
     })
