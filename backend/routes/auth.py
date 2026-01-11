@@ -329,12 +329,17 @@ async def forgot_password(email: str = Body(..., embed=True)):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    # TODO: Send OTP via email
-    return {
-        "message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
-        # Remove this in production:
-        "dev_otp": otp_code
-    }
+    # Send OTP via email
+    email_html = get_otp_email_html(otp_code, "استعادة كلمة المرور")
+    email_sent = await send_email(email, "استعادة كلمة المرور - Gamelo", email_html)
+    
+    response = {"message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني"}
+    
+    # Only include dev_otp if email wasn't sent (for testing)
+    if not email_sent:
+        response["dev_otp"] = otp_code
+    
+    return response
 
 
 @router.post("/reset-password")
