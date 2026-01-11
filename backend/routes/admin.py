@@ -180,6 +180,37 @@ async def update_user_role(
     return {"message": "تم تحديث دور المستخدم"}
 
 
+@router.patch("/users/{user_id}/role")
+async def update_user_role_and_permissions(
+    user_id: str,
+    role: str = Body(None),
+    permissions: list = Body(None),
+    admin: dict = Depends(get_admin_user)
+):
+    """Update user role and permissions"""
+    if admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتغيير الأدوار")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if role is not None:
+        if role not in ROLES:
+            raise HTTPException(status_code=400, detail="دور غير صالح")
+        update_data["role"] = role
+        update_data["role_level"] = ROLES[role]["level"]
+    
+    if permissions is not None:
+        update_data["permissions"] = permissions
+    
+    await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    return {"message": "تم تحديث صلاحيات المستخدم"}
+
+
 @router.get("/users/{user_id}/permissions")
 async def get_user_permissions(user_id: str, admin: dict = Depends(get_admin_user)):
     """Get user's effective permissions"""
