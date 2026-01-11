@@ -34,7 +34,16 @@ export const formatDateShort = (dateString) => {
   }).format(date);
 };
 
-export const API_URL = `${import.meta.env.VITE_API_URL || 'http://72.62.149.153'}/api`;
+// Auto-detect protocol (HTTP/HTTPS) based on current page
+const getBaseUrl = () => {
+  // In browser, use relative URL which automatically uses the correct protocol
+  if (typeof window !== 'undefined') {
+    return '';  // Use relative URLs - Nginx will proxy /api to backend
+  }
+  return import.meta.env.VITE_API_URL || '';
+};
+
+export const API_URL = `${getBaseUrl()}/api`;
 
 export const getAuthHeader = () => {
   const token = localStorage.getItem("token");
