@@ -191,6 +191,9 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
             "variant_name": variant_name,
             "codes": codes
         }],
+        "subtotal_jod": subtotal_jod,
+        "subtotal_usd": subtotal_usd,
+        "discount_amount": discount_amount,
         "total_jod": total_jod,
         "total_usd": total_usd,
         "status": "completed",
@@ -199,6 +202,10 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
         "created_at": now,
         "updated_at": now
     }
+    
+    # Add discount data if applied
+    if discount_data:
+        order_doc["discount_data"] = discount_data
     
     # For account type products, save customer details
     if product.get("product_type") in ["existing_account", "new_account"]:
@@ -210,6 +217,26 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
         }
     
     await db.orders.insert_one(order_doc)
+    
+    # Track affiliate coupon usage
+    if discount_data and discount_data.get("is_affiliate_coupon"):
+        await db.discount_usage.insert_one({
+            "id": str(uuid.uuid4()),
+            "discount_id": discount_data["discount_id"],
+            "user_id": user["id"],
+            "order_id": order_id,
+            "order_total": subtotal_jod,
+            "discount_amount": discount_amount,
+            "affiliate_id": discount_data.get("affiliate_id"),
+            "affiliate_commission": affiliate_commission,
+            "products": [{
+                "product_id": actual_product_id,
+                "product_name": product["name"],
+                "quantity": order.quantity,
+                "total": subtotal_jod
+            }],
+            "used_at": now
+        })
     
     # Deduct from wallet (both fields for compatibility)
     await db.users.update_one(
