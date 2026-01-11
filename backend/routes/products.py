@@ -94,6 +94,22 @@ async def get_product(product_id: str):
     return product
 
 
+# Public stats endpoint
+@router.get("/stats/public")
+async def get_public_stats():
+    """Get public statistics for homepage"""
+    total_users = await db.users.count_documents({})
+    total_orders = await db.orders.count_documents({})
+    total_products = await db.products.count_documents({"is_active": True})
+    
+    return {
+        "total_users": total_users,
+        "total_orders": total_orders,
+        "total_products": total_products,
+        "satisfaction_rate": 100
+    }
+
+
 # Admin Products Endpoints
 @router.get("/admin/products")
 async def get_admin_products(
