@@ -317,6 +317,12 @@ class DiscountCodeCreate(BaseModel):
     applicable_categories: Optional[List[str]] = None
     first_purchase_only: bool = False
     requires_min_items: int = 0
+    # Affiliate/Marketer fields
+    is_affiliate_coupon: bool = False
+    affiliate_id: Optional[str] = None
+    affiliate_name: Optional[str] = None
+    commission_type: str = "percentage"  # percentage or fixed
+    commission_value: float = 0  # affiliate commission
 
 
 class DiscountCodeResponse(BaseModel):
@@ -338,6 +344,44 @@ class DiscountCodeResponse(BaseModel):
     first_purchase_only: bool
     requires_min_items: int
     created_at: str
+    # Affiliate fields
+    is_affiliate_coupon: bool = False
+    affiliate_id: Optional[str] = None
+    affiliate_name: Optional[str] = None
+    commission_type: str = "percentage"
+    commission_value: float = 0
+
+
+# Affiliate Models
+class AffiliateCreate(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AffiliateResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = True
+    total_sales: float = 0
+    total_commission: float = 0
+    total_orders: int = 0
+    created_at: str
+
+
+class AffiliateStats(BaseModel):
+    total_usage: int = 0
+    total_sales: float = 0
+    total_commission: float = 0
+    store_profit: float = 0
+    orders: List[Dict] = []
 
 
 class ApplyDiscountRequest(BaseModel):
