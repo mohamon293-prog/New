@@ -98,8 +98,63 @@ async def create_order(order: OrderCreate, user: dict = Depends(get_current_user
         price_usd = product["price_usd"]
         variant_name = None
     
-    total_jod = price_jod * order.quantity
-    total_usd = price_usd * order.quantity
+    subtotal_jod = price_jod * order.quantity
+    subtotal_usd = price_usd * order.quantity
+    
+    # Apply discount if provided
+    discount_amount = 0
+    discount_data = None
+    affiliate_commission = 0
+    
+    if order.discount_code:
+        discount = await db.discount_codes.find_one({
+            "code": order.discount_code.upper(),
+            "is_active": True
+        })
+        
+        if discount:
+            # Check if applicable to this product
+            applicable = True
+            if discount.get("applicable_products"):
+                if actual_product_id not in discount["applicable_products"]:
+                    applicable = False
+            
+            if applicable and subtotal_jod >= discount.get("min_purchase", 0):
+                # Calculate discount
+                if discount["discount_type"] == "percentage":
+                    discount_amount = subtotal_jod * (discount["discount_value"] / 100)
+                    if discount.get("max_discount"):
+                        discount_amount = min(discount_amount, discount["max_discount"])
+                else:
+                    discount_amount = min(discount["discount_value"], subtotal_jod)
+                
+                discount_amount = round(discount_amount, 2)
+                
+                # Calculate affiliate commission if applicable
+                if discount.get("is_affiliate_coupon"):
+                    if discount.get("commission_type") == "percentage":
+                        affiliate_commission = subtotal_jod * (discount.get("commission_value", 0) / 100)
+                    else:
+                        affiliate_commission = discount.get("commission_value", 0)
+                    affiliate_commission = round(affiliate_commission, 2)
+                
+                discount_data = {
+                    "code": discount["code"],
+                    "discount_id": discount["id"],
+                    "discount_amount": discount_amount,
+                    "is_affiliate_coupon": discount.get("is_affiliate_coupon", False),
+                    "affiliate_id": discount.get("affiliate_id"),
+                    "affiliate_commission": affiliate_commission
+                }
+                
+                # Update usage count
+                await db.discount_codes.update_one(
+                    {"id": discount["id"]},
+                    {"$inc": {"used_count": 1}}
+                )
+    
+    total_jod = subtotal_jod - discount_amount
+    total_usd = subtotal_usd - (discount_amount * 1.41)  # Approximate USD discount
     
     # Check wallet balance
     if user.get("wallet_balance", 0) < total_jod:
