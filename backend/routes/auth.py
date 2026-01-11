@@ -120,14 +120,20 @@ async def init_registration(
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    # TODO: Send OTP via email and WhatsApp
-    # For now, return the OTP in development (remove in production)
-    return {
+    # Send OTP via email
+    email_html = get_otp_email_html(otp_code, "التسجيل")
+    email_sent = await send_email(email, "رمز التحقق - Gamelo", email_html)
+    
+    response = {
         "message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
-        "otp_sent": True,
-        # Remove this in production:
-        "dev_otp": otp_code
+        "otp_sent": email_sent
     }
+    
+    # Only include dev_otp if email wasn't sent (for testing)
+    if not email_sent:
+        response["dev_otp"] = otp_code
+    
+    return response
 
 
 @router.post("/register/verify")
