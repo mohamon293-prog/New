@@ -9,9 +9,22 @@ import bcrypt
 import jwt
 import random
 import string
+import os
+import asyncio
+import logging
+import resend
+from dotenv import load_dotenv
 
 from models.schemas import UserCreate, UserLogin, UserResponse, UserProfile, AuthResponse
 from utils.database import db, JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION_HOURS, get_current_user
+
+# Load environment variables
+load_dotenv()
+
+# Configure Resend
+resend.api_key = os.environ.get("RESEND_API_KEY", "")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
