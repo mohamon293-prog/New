@@ -74,9 +74,13 @@ export default function HomePage() {
       try {
         const statsResponse = await axios.get(`${API_URL}/stats/public`);
         if (statsResponse.data) {
+          const formatNumber = (num) => {
+            if (num >= 1000) return `${(num / 1000).toFixed(0)},000+`;
+            return `${num}+`;
+          };
           setStats([
-            { value: `${statsResponse.data.total_users || 100}+`, label: "عميل سعيد" },
-            { value: `${statsResponse.data.total_orders || 50}+`, label: "طلب مكتمل" },
+            { value: formatNumber(statsResponse.data.total_users || 100), label: "عميل سعيد" },
+            { value: formatNumber(statsResponse.data.total_orders || 50), label: "طلب مكتمل" },
             { value: "24/7", label: "دعم فني" },
             { value: "100%", label: "رضا العملاء" },
           ]);
