@@ -2,6 +2,7 @@
 ###########################################
 # Gamelo - Complete Installation Script
 # For Ubuntu 22.04 VPS (Hostinger KVM)
+# Updated: January 2026
 ###########################################
 
 set -e
@@ -44,7 +45,20 @@ log "Installing essential packages..."
 apt install -y curl wget git nginx python3 python3-pip python3-venv supervisor certbot python3-certbot-nginx gnupg
 
 ###########################################
-# 2. MongoDB Installation
+# 2. Node.js Installation (for frontend build)
+###########################################
+if ! command -v node &> /dev/null; then
+    log "Installing Node.js 20..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt install -y nodejs
+fi
+node --version
+
+# Install yarn
+npm install -g yarn
+
+###########################################
+# 3. MongoDB Installation
 ###########################################
 if ! command -v mongod &> /dev/null; then
     log "Installing MongoDB 7.0..."
@@ -59,12 +73,11 @@ else
     log "MongoDB already installed"
 fi
 
-# Verify MongoDB
 mongod --version || error "MongoDB installation failed"
 log "MongoDB is running"
 
 ###########################################
-# 3. Clone Repository
+# 4. Clone Repository
 ###########################################
 log "Setting up application directory..."
 rm -rf $APP_DIR
@@ -76,7 +89,7 @@ git clone $REPO_URL .
 git config --global --add safe.directory $APP_DIR
 
 ###########################################
-# 4. Backend Setup
+# 5. Backend Setup
 ###########################################
 log "Setting up Python backend..."
 cd $APP_DIR/backend
@@ -96,37 +109,41 @@ DB_NAME=$DB_NAME
 JWT_SECRET=$(openssl rand -hex 32)
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=24
-FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+CORS_ORIGINS=*
+ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+RESEND_API_KEY=
+SENDER_EMAIL=onboarding@resend.dev
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 EOF
 
 log "Backend configured"
 
 ###########################################
-# 5. Frontend Setup
+# 6. Frontend Setup & Build
 ###########################################
 log "Setting up frontend..."
 cd $APP_DIR/frontend
 
-# Create .env file with server IP
+# Create .env file
 cat > .env << EOF
-VITE_API_URL=http://$SERVER_IP
+VITE_API_URL=https://$DOMAIN
 EOF
 
-# The build folder is already in Git - no need to build
-if [ -d "build" ] && [ -f "build/index.html" ]; then
-    log "Frontend build found in repository"
-else
-    warn "Frontend build not found - will need manual build"
-fi
+# Install dependencies and build
+yarn install
+yarn build
+
+log "Frontend built successfully"
 
 ###########################################
-# 6. Create uploads directory
+# 7. Create directories
 ###########################################
 mkdir -p $APP_DIR/backend/uploads/images
 chown -R www-data:www-data $APP_DIR
 
 ###########################################
-# 7. Supervisor Configuration
+# 8. Supervisor Configuration
 ###########################################
 log "Configuring Supervisor..."
 cat > /etc/supervisor/conf.d/gamelo-backend.conf << EOF
@@ -148,15 +165,15 @@ supervisorctl restart gamelo-backend
 log "Backend service configured"
 
 ###########################################
-# 8. Nginx Configuration
+# 9. Nginx Configuration
 ###########################################
 log "Configuring Nginx..."
-cat > /etc/nginx/sites-available/gamelo << EOF
+cat > /etc/nginx/sites-available/gamelo << 'NGINX_EOF'
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN $SERVER_IP _;
+    server_name DOMAIN_PLACEHOLDER www.DOMAIN_PLACEHOLDER SERVER_IP_PLACEHOLDER _;
     
-    root $APP_DIR/frontend/build;
+    root APP_DIR_PLACEHOLDER/frontend/dist;
     index index.html;
     client_max_body_size 100M;
     
@@ -164,25 +181,30 @@ server {
     location /api/ {
         proxy_pass http://127.0.0.1:8001/api/;
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300;
         proxy_connect_timeout 300;
     }
     
     # Uploads
     location /uploads/ {
-        alias $APP_DIR/backend/uploads/;
+        alias APP_DIR_PLACEHOLDER/backend/uploads/;
     }
     
     # Frontend SPA
     location / {
-        try_files \$uri \$uri/ /index.html;
+        try_files $uri $uri/ /index.html;
     }
 }
-EOF
+NGINX_EOF
+
+# Replace placeholders
+sed -i "s|DOMAIN_PLACEHOLDER|$DOMAIN|g" /etc/nginx/sites-available/gamelo
+sed -i "s|SERVER_IP_PLACEHOLDER|$SERVER_IP|g" /etc/nginx/sites-available/gamelo
+sed -i "s|APP_DIR_PLACEHOLDER|$APP_DIR|g" /etc/nginx/sites-available/gamelo
 
 rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/gamelo /etc/nginx/sites-enabled/
@@ -190,7 +212,7 @@ nginx -t && systemctl restart nginx
 log "Nginx configured"
 
 ###########################################
-# 9. Initialize Database with Sample Data
+# 10. Initialize Database
 ###########################################
 log "Initializing database..."
 
@@ -205,9 +227,10 @@ db.users.insertOne({
   "phone": "",
   "role": "admin",
   "role_level": 100,
-  "permissions": [],
+  "permissions": ["all"],
   "is_active": true,
   "is_approved": true,
+  "is_verified": true,
   "wallet_balance": 0,
   "wallet_balance_jod": 0,
   "wallet_balance_usd": 0,
@@ -388,19 +411,23 @@ db.categories.createIndex({id: 1}, {unique: true});
 db.orders.createIndex({id: 1}, {unique: true});
 db.orders.createIndex({user_id: 1});
 db.codes.createIndex({product_id: 1, is_sold: 1});
+db.affiliates.createIndex({id: 1}, {unique: true});
+db.affiliates.createIndex({email: 1}, {unique: true});
+db.discount_codes.createIndex({code: 1}, {unique: true});
+db.discount_usage.createIndex({discount_id: 1});
 print("Indexes created");
 '
 
-log "Database initialized with sample data"
+log "Database initialized"
 
 ###########################################
-# 10. Final Permissions
+# 11. Final Permissions
 ###########################################
 chown -R www-data:www-data $APP_DIR
 chmod -R 755 $APP_DIR
 
 ###########################################
-# 11. Verify Installation
+# 12. Verify Installation
 ###########################################
 log "Verifying installation..."
 sleep 3
@@ -433,6 +460,16 @@ echo "Admin Login:"
 echo "  - Email: admin@gamelo.com"
 echo "  - Password: admin123"
 echo ""
+echo "Features included:"
+echo "  ✓ User authentication with JWT"
+echo "  ✓ Email verification & Password reset (needs Resend API key)"
+echo "  ✓ Product management (digital codes, accounts)"
+echo "  ✓ Order management with wallet payment"
+echo "  ✓ Affiliate/Marketer system with commissions"
+echo "  ✓ Product-specific coupons"
+echo "  ✓ Analytics dashboard"
+echo "  ✓ Role-based access control (RBAC)"
+echo ""
 echo "Useful commands:"
 echo "  - View backend logs: tail -f /var/log/supervisor/gamelo-backend.err.log"
 echo "  - Restart backend: supervisorctl restart gamelo-backend"
@@ -440,4 +477,9 @@ echo "  - Restart nginx: systemctl restart nginx"
 echo ""
 echo "To enable HTTPS (after DNS is configured):"
 echo "  certbot --nginx -d $DOMAIN -d www.$DOMAIN"
+echo ""
+echo "To configure email (for password reset):"
+echo "  1. Sign up at https://resend.com"
+echo "  2. Add your API key to $APP_DIR/backend/.env"
+echo "  3. Restart backend: supervisorctl restart gamelo-backend"
 echo ""
